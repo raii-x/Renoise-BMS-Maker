@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RenoiseScriptingTool doc_version="0">
+  <Name>BMS Maker</Name>
+  <Id>com.raii.BmsMaker</Id>
+  <Version>0.01</Version>
+  <ApiVersion>5</ApiVersion>
+  <Author>raii | raii.program@gmail.com</Author>
+  <AutoUpgraded>false</AutoUpgraded>
+  <Category>BMS</Category>
+  <Description>BMS creation support tool</Description>
+  <Homepage>http://github.com/raii-x</Homepage>
+  <Platform/>
+  <Icon/>
+</RenoiseScriptingTool>
