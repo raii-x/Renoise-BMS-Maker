@@ -31,9 +31,12 @@ BMS creation support tool for Renoise
 2. Renoise でダウンロードした xrnx ファイルを開く。
 
 ## 使い方
-1. Tool メニューから Make BMS... を選択する。
+1. Tools メニューから Make BMS... を選択する。  
+![Tools](https://raw.githubusercontent.com/raii-x/Renoise-BMS-Maker/images/tools.png)
 
-2. BMS Maker ウィンドウで各種設定をする。
+2. BMS Maker ウィンドウで各種設定をする。  
+![BMS Maker window](https://raw.githubusercontent.com/raii-x/Renoise-BMS-Maker/images/bms_maker.png)
+
     * Range: 音切り対象にする範囲の設定
         * Entire Song:  
         ソング全体
@@ -75,7 +78,9 @@ BMS creation support tool for Renoise
 
 4. BMS Maker ウィンドウの Make ボタンを押し、音切りされた wav ファイルを出力し、BMS シーケンスの出力に移る。または、Export only ボタンを押し、wav ファイルの出力を行わず、BMS シーケンスの出力に移る。
 
-5. BMSE Export 画面で、BMS シーケンスをテキストファイルで出力する。
+5. BMSE Export ウィンドウで、BMS シーケンスをテキストファイルで出力する。  
+![BMSE Export window](https://raw.githubusercontent.com/raii-x/Renoise-BMS-Maker/images/bmse_export.png)
+
     * File Name:  
     出力する BMS シーケンスのテキストファイルの名前を指定。
 
@@ -85,6 +90,7 @@ BMS creation support tool for Renoise
     * Export:  
     BMS シーケンスの出力を行う。
 
-6. 出力された wav ファイルをすべて選択し、BMS エディタの WAV 定義欄にドラッグ＆ドロップする。
+6. 出力された wav ファイルをすべて選択し、BMS エディタの WAV 定義欄にドラッグ＆ドロップする。  
+![WAV drag & drop](https://raw.githubusercontent.com/raii-x/Renoise-BMS-Maker/images/wav_drag.png)
 
 7. 出力されたテキストファイルの全文をコピーし、BMS エディタで貼り付けを行う。
