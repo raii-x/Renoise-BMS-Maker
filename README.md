@@ -20,6 +20,7 @@ BMS creation support tool for Renoise
 * Arpeggio コマンド、Retrigger コマンドのエフェクトによる発音位置での音切り
 * Phrase 内のノートの音切り
 * サイドチェインなどの他のトラックの信号を使ったデバイスパラメータ変化の再現
+* Pattern の最大ライン数である512ライン以上のノートのレンダリング
 
 ## 必要なもの
 * [Renoise 3.1](http://www.renoise.com/ "Home | Renoise")
