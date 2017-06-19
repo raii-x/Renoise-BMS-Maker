@@ -80,7 +80,7 @@ local function note_to_string(note)
   return str
 end
 
-
+-- Does the line have a note end(not empty)?
 local function has_end(line, start_ncol_idx, end_ncol_idx)
   for i = start_ncol_idx, end_ncol_idx do
     -- not empty
@@ -91,6 +91,7 @@ local function has_end(line, start_ncol_idx, end_ncol_idx)
   return false
 end
 
+-- Does the line have a note start(not OFF nor empty)?
 local function has_start(line, start_ncol_idx, end_ncol_idx)
   for i = start_ncol_idx, end_ncol_idx do
     -- not OFF nor empty
@@ -101,6 +102,7 @@ local function has_start(line, start_ncol_idx, end_ncol_idx)
   return false
 end
 
+-- Does the line have a note cut(Cx command on volume or panning column)?
 local function has_cut(line)
   for ncol_idx, ncol in ipairs(line.note_columns) do
     if bit.band(ncol.volume_value, 0xff00) == 0x0c00 or
