@@ -114,20 +114,117 @@ local function has_cut(line)
 end
 
 --------------------------------------------------------------------------------
+-- analyze_column
+
+local function analyze_column(target, state, note_opts)
+
+  local lpb = renoise.song().transport.lpb
+  local ecol_num = target.trk.visible_effect_columns
+
+  -- lines, automation, number
+  --   lines -> [array of {note_columns, effect_columns} tables]
+  local note = nil
+  local note_time
+  local pos_bmse = 0
+  local time = target.start_time
+  local start_pt_idx = 1
+  
+  local function note_end()
+    -- Automation
+    note.automation = table.create()
+    for env_idx, env in ipairs(target.auto_envs) do
+      local q = target.auto_prms[env_idx].time_quantum
+      local nlines = note_opts.release_lines
+      if note_opts.duration then
+        nlines = nlines + #note.lines
+      end
+      
+      local slice
+      slice, start_pt_idx = slice_points(
+        env, start_pt_idx, note_time, note_time + nlines - q)
+      note.automation:insert(slice)
+    end
+    
+    local str = note_to_string(note)
+    print("note", math.floor((note_time-1)/64), (note_time-1)%64)
+    print(str)
+    
+    if state.notes_hash[str] == nil then
+      state.notes_hash[str] = note
+      state.notes:insert(note)
+      note.number = state.note_number
+      state.note_number = state.note_number + 1
+    else
+      note = state.notes_hash[str]
+    end
+    
+    state.order[#state.order].note = note
+    note = nil
+  end
+  
+  -- Iterate lines
+  for line_idx, line in ipairs(target.lines) do
+  
+    --local ncol = line:note_column(col_idx)
+    
+    if note and has_end(line, target.start_ncol_idx, target.end_ncol_idx) then
+      note_end()
+    end
+  
+    -- Note start
+    if has_start(line, target.start_ncol_idx, target.end_ncol_idx) then
+      note = {
+        lines = table.create()
+      }
+      note_time = time
+      state.order:insert {
+        pos = pos_bmse,
+        column = target.start_ncol_idx,
+      }
+    end
+    
+    -- Note line
+    if note then
+      local noteline = {
+        note_columns = table.create(),
+        effect_columns = table.create(),
+      }
+      for i = target.start_ncol_idx, target.end_ncol_idx do
+        local ncol = line:note_column(i)
+        noteline.note_columns:insert(ncol)
+      end
+      for i = 1, ecol_num do
+        local ecol = line:effect_column(i)
+        noteline.effect_columns:insert(ecol)
+      end
+      
+      note.lines:insert(noteline)
+      
+      if not note_opts.duration or has_cut(noteline) then
+        note_end()
+      end
+    end
+    
+    pos_bmse = pos_bmse + 48 / lpb
+    time = time + 1
+    
+  end
+  
+  if note then
+    note_end()
+  end
+  
+end
+
+--------------------------------------------------------------------------------
 -- analyze
 
 function analyze(trk_idx, note_opts, s_pos, e_pos)
   local sclock = os.clock()
   
-  local notes = table.create()
-  local order = table.create()
-  local notes_hash = {}
-  local note_number = 0
-  local lpb = renoise.song().transport.lpb
   local pat_seq = renoise.song().sequencer.pattern_sequence
   local trk = renoise.song():track(trk_idx)
   local ncol_num = trk.visible_note_columns
-  local ecol_num = trk.visible_effect_columns
   
   -- Automation
   local auto_prms = search_automated_params(trk)
@@ -153,116 +250,40 @@ function analyze(trk_idx, note_opts, s_pos, e_pos)
   -- Flatten lines
   local lines, start_time = flatten_lines(pat_seq, trk_idx, s_pos, e_pos)
   
-  local function analyze_column(start_ncol_idx, end_ncol_idx)
-  
-    -- lines, automation, number
-    --   lines -> [array of {note_columns, effect_columns} tables]
-    local note = nil
-    local note_time
-    local pos_bmse = 0
-    local time = start_time
-    local start_pt_idx = 1
-    
-    local function note_end()
-      -- Automation
-      note.automation = table.create()
-      for env_idx, env in ipairs(auto_envs) do
-        local q = auto_prms[env_idx].time_quantum
-        local nlines = note_opts.release_lines
-        if note_opts.duration then
-          nlines = nlines + #note.lines
-        end
-        
-        local slice
-        slice, start_pt_idx = slice_points(
-          env, start_pt_idx, note_time, note_time + nlines - q)
-        note.automation:insert(slice)
-      end
-      
-      local str = note_to_string(note)
-      print("note", math.floor((note_time-1)/64), (note_time-1)%64)
-      print(str)
-      
-      if notes_hash[str] == nil then
-        notes_hash[str] = note
-        notes:insert(note)
-        note.number = note_number
-        note_number = note_number + 1
-      else
-        note = notes_hash[str]
-      end
-      
-      order[#order].note = note
-      note = nil
-    end
-    
-    -- Iterate lines
-    for line_idx, line in ipairs(lines) do
-    
-      --local ncol = line:note_column(col_idx)
-      
-      if note and has_end(line, start_ncol_idx, end_ncol_idx) then
-        note_end()
-      end
-    
-      -- Note start
-      if has_start(line, start_ncol_idx, end_ncol_idx) then
-        note = {
-          lines = table.create()
-        }
-        note_time = time
-        order:insert {
-          pos = pos_bmse,
-          column = start_ncol_idx,
-        }
-      end
-      
-      -- Note line
-      if note then
-        local noteline = {
-          note_columns = table.create(),
-          effect_columns = table.create(),
-        }
-        for i = start_ncol_idx, end_ncol_idx do
-          local ncol = line:note_column(i)
-          noteline.note_columns:insert(ncol)
-        end
-        for i = 1, ecol_num do
-          local ecol = line:effect_column(i)
-          noteline.effect_columns:insert(ecol)
-        end
-        
-        note.lines:insert(noteline)
-        
-        if not note_opts.duration or has_cut(noteline) then
-          note_end()
-        end
-      end
-      
-      pos_bmse = pos_bmse + 48 / lpb
-      time = time + 1
-      
-    end
-    
-    if note then
-      note_end()
-    end
-    
-  end
+  local target = {
+    trk = trk,
+    lines = lines,
+    start_time = start_time,
+    auto_envs = auto_envs,
+    auto_prms = auto_prms,
+    start_ncol_idx = nil,
+    end_ncol_idx = nil,
+  }
+
+  local state = {
+    notes = table.create(),
+    order = table.create(),
+    notes_hash = {},
+    note_number = 0,
+  }
   
   if note_opts.chord_mode then
-    analyze_column(1, ncol_num)
+    target.start_ncol_idx = 1
+    target.end_ncol_idx = ncol_num
+    analyze_column(target, state, note_opts)
   else
     for i = 1, ncol_num do
-      analyze_column(i, i)
+      target.start_ncol_idx = i
+      target.end_ncol_idx = i
+      analyze_column(target, state, note_opts)
     end
   end
   
   print("analyze", os.clock() - sclock)
   
   local bms_data = {
-    notes = notes,
-    order = order,
+    notes = state.notes,
+    order = state.order,
     automated_params = auto_prms,
   }
   return bms_data
