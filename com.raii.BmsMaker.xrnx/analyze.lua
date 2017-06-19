@@ -81,6 +81,36 @@ local function note_to_string(note)
 end
 
 
+local function has_end(line, start_ncol_idx, end_ncol_idx)
+  for i = start_ncol_idx, end_ncol_idx do
+    -- not empty
+    if line:note_column(i).note_value ~= 121 then
+      return true
+    end
+  end
+  return false
+end
+
+local function has_start(line, start_ncol_idx, end_ncol_idx)
+  for i = start_ncol_idx, end_ncol_idx do
+    -- not OFF nor empty
+    if line:note_column(i).note_value < 120 then
+      return true
+    end
+  end
+  return false
+end
+
+local function has_cut(line)
+  for ncol_idx, ncol in ipairs(line.note_columns) do
+    if bit.band(ncol.volume_value, 0xff00) == 0x0c00 or
+      bit.band(ncol.panning_value, 0xff00) == 0x0c00 then
+      return true
+    end
+  end
+  return false
+end
+
 --------------------------------------------------------------------------------
 -- analyze
 
@@ -123,36 +153,6 @@ function analyze(trk_idx, note_opts, s_pos, e_pos)
   
   local function analyze_column(start_ncol_idx, end_ncol_idx)
   
-    local function has_end(line)
-      for i = start_ncol_idx, end_ncol_idx do
-        -- not empty
-        if line:note_column(i).note_value ~= 121 then
-          return true
-        end
-      end
-      return false
-    end
-    
-    local function has_start(line)
-      for i = start_ncol_idx, end_ncol_idx do
-        -- not OFF nor empty
-        if line:note_column(i).note_value < 120 then
-          return true
-        end
-      end
-      return false
-    end
-    
-    local function has_cut(line)
-      for ncol_idx, ncol in ipairs(line.note_columns) do
-        if bit.band(ncol.volume_value, 0xff00) == 0x0c00 or
-          bit.band(ncol.panning_value, 0xff00) == 0x0c00 then
-          return true
-        end
-      end
-      return false
-    end
-    
     -- lines, automation, number
     --   lines -> [array of {note_columns, effect_columns} tables]
     local note = nil
@@ -199,12 +199,12 @@ function analyze(trk_idx, note_opts, s_pos, e_pos)
     
       --local ncol = line:note_column(col_idx)
       
-      if note and has_end(line) then
+      if note and has_end(line, start_ncol_idx, end_ncol_idx) then
         note_end()
       end
     
       -- Note start
-      if has_start(line) then
+      if has_start(line, start_ncol_idx, end_ncol_idx) then
         note = {
           lines = table.create()
         }
