@@ -127,7 +127,11 @@ local function analyze_column(target, state, note_opts)
   local note_time
   local pos_bmse = 0
   local time = target.start_time
-  local start_pt_idx = 1
+  local start_pt_idx = table.create()
+
+  for i = 1, #target.auto_envs do
+    start_pt_idx[i] = 1
+  end
   
   local function note_end()
     -- Automation
@@ -139,9 +143,10 @@ local function analyze_column(target, state, note_opts)
         nlines = nlines + #note.lines
       end
       
+      if start_pt_idx[env_idx] > #env then debug.start() end
       local slice
-      slice, start_pt_idx = slice_points(
-        env, start_pt_idx, note_time, note_time + nlines - q)
+      slice, start_pt_idx[env_idx] = slice_points(
+        env, start_pt_idx[env_idx], note_time, note_time + nlines - q)
       note.automation:insert(slice)
     end
     
