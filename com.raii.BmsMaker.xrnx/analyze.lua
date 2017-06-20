@@ -46,21 +46,8 @@ end
 
 
 local function note_to_string(note)
-  --[[local strs = table.create()
-  for line_idx, line in ipairs(note.lines) do
-    strs:insert(tostring(line.note_columns[1]))
-    strs:insert("\n")
-  end
-  for env_idx, env in ipairs(note.automation) do
-    for pt_idx, pt in ipairs(env) do
-      strs:insert(("%.2f,%.3f,"):format(pt.time, quantize_value(pt.value)))
-    end
-    strs:insert("\n")
-  end
-  
-  return strs:concat()]]
-  
   local str = ""
+
   for line_idx, line in ipairs(note.lines) do
     for ncol_idx, ncol in ipairs(line.note_columns) do
       str = str .. tostring(ncol)
@@ -70,6 +57,7 @@ local function note_to_string(note)
     end
     str = str .. "\n"
   end
+  
   for env_idx, env in ipairs(note.automation) do
     for pt_idx, pt in ipairs(env) do
       str = str .. ("%.2f,%.3f,"):format(pt.time, quantize_value(pt.value))

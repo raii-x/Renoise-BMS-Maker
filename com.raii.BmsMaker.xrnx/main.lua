@@ -103,7 +103,6 @@ renoise.tool():add_menu_entry {
   name = "Main Menu:Tools:Make BMS...",
   invoke = function()
     make_bms_gui()
-    --export_to_bmse()
   end
 }
 
