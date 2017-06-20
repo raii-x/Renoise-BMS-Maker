@@ -45,13 +45,27 @@ local function quantize_value(x)
 end
 
 
-local function note_to_string(note)
+local function note_to_string(trk, note)
   local str = ""
 
   for line_idx, line in ipairs(note.lines) do
     for ncol_idx, ncol in ipairs(line.note_columns) do
-      str = str .. tostring(ncol)
+      str = str .. ncol.note_string .. ncol.instrument_string
+
+      if trk.volume_column_visible then
+        str = str .. ncol.volume_string
+      end
+      if trk.panning_column_visible then
+        str = str .. ncol.panning_string
+      end
+      if trk.delay_column_visible then
+        str = str .. ncol.delay_string
+      end
+      if trk.sample_effects_column_visible then
+        str = str .. ncol.effect_number_string .. ncol.effect_amount_string
+      end
     end
+
     for ecol_idx, ecol in ipairs(line.effect_columns) do
       str = str .. tostring(ecol)
     end
@@ -141,7 +155,7 @@ local function analyze_column(target, state, note_opts)
       note.automation:insert(slice)
     end
     
-    local str = note_to_string(note)
+    local str = note_to_string(target.trk, note)
     print("note", math.floor((note_time-1)/64), (note_time-1)%64)
     print(str)
     
