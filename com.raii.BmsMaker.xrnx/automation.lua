@@ -133,7 +133,9 @@ end
 
 
 function slice_points(points, start_pt_idx, s_time, e_time)
-  -- Decide start point (Update start_pt_idx)
+  -- Search the necessary point to get the start value
+  -- in the time range given by s_time and e_time (Update start_pt_idx)
+  -- The search start from start_pt_idx
   for pt_idx = start_pt_idx, #points do
     local pt = points[pt_idx]
     
@@ -151,7 +153,9 @@ function slice_points(points, start_pt_idx, s_time, e_time)
   local slice = table.create()
 
   -- Slice
-  -- Before time range
+  -- When all points come before the time range
+  -- or the last point comes on start of the time range
+  -- or there's only one point
   if start_pt_idx == #points then
     slice:insert {
       time = 1,
@@ -159,7 +163,7 @@ function slice_points(points, start_pt_idx, s_time, e_time)
     }
     
   else
-    -- The first point (Before time range)
+    -- Get the start value in the range and make the first point
     slice:insert {
       time = 1,
       value = interpolate_points(
@@ -169,7 +173,7 @@ function slice_points(points, start_pt_idx, s_time, e_time)
     for pt_idx = start_pt_idx+1, #points do
       local pt = points[pt_idx]
       
-      -- After time range
+      -- Get the end value in the range and make the last point
       if pt.time >= e_time then
         local val = interpolate_points(points[pt_idx-1], pt, e_time)
         if val ~= slice[#slice].value then
@@ -180,7 +184,7 @@ function slice_points(points, start_pt_idx, s_time, e_time)
         end
         break
         
-      -- In time range
+      -- Get a value in the time range and make a point
       else
         slice:insert {
           time = 1 + (pt.time - s_time),
