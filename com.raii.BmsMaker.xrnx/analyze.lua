@@ -91,10 +91,13 @@ local function has_start(line, start_ncol_idx, end_ncol_idx)
 end
 
 -- Does the line have a note cut(Cx command on volume or panning column)?
-local function has_cut(noteline)
+local function has_cut(trk, noteline)
   for ncol_idx, ncol in ipairs(noteline.note_columns) do
-    if bit.band(ncol.volume_value, 0xff00) == 0x0c00 or
-      bit.band(ncol.panning_value, 0xff00) == 0x0c00 then
+    if (trk.volume_column_visible and
+      bit.band(ncol.volume_value, 0xff00) == 0x0c00) or
+      (trk.panning_column_visible and
+      bit.band(ncol.panning_value, 0xff00) == 0x0c00) then
+      
       return true
     end
   end
@@ -193,7 +196,7 @@ local function analyze_column(target, state, note_opts)
       
       note.lines:insert(noteline)
       
-      if not note_opts.duration or has_cut(noteline) then
+      if not note_opts.duration or has_cut(target.trk, noteline) then
         note_end()
       end
     end
