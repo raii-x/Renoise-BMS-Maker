@@ -115,6 +115,8 @@ function get_filename(file_opts, index)
 end
 
 
+-- Returns the start position and the end position
+-- Returns nil when it couldn't get the range
 local function get_range()
   local pat_seq = renoise.song().sequencer.pattern_sequence
   local s_pos = renoise.SongPos()
@@ -129,6 +131,12 @@ local function get_range()
     
   elseif range_mode == RANGE_MODE_SELECTION_SEQUENCE then
     local range = renoise.song().sequencer.selection_range
+    -- No range is selected
+    if range[1] == 0 then
+      renoise.app():show_error("Please select a range.")
+      return nil
+    end
+
     s_pos.sequence = range[1]
     s_pos.line = 1
     e_pos.sequence = range[2]
@@ -152,6 +160,11 @@ function make_bms(export_only)
   
   local track_index = renoise.song().selected_track_index
   local start_pos, end_pos = get_range()
+
+  if start_pos == nil then
+    return
+  end
+
   local note_opts = {
     duration = has_duration,
     release_lines = release_lines,
