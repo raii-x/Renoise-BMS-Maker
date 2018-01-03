@@ -156,8 +156,28 @@ local function get_range()
     e_pos.sequence = seq_idx
     e_pos.line = range.end_line
     
-  elseif range_mode == RANGE_MODE_SELECTION_CUSTOM then
-    error("not implemented")
+  elseif range_mode == RANGE_MODE_CUSTOM then
+    if range_end_pos.sequence > #pat_seq or
+      range_start_pos.line >
+        renoise.song():pattern(range_start_pos.sequence).number_of_lines or
+      range_end_pos.line >
+        renoise.song():pattern(range_end_pos.sequence).number_of_lines then
+      
+      renoise.app():show_error("The range position doesn't exist.")
+      return nil
+    end
+    if range_start_pos > range_end_pos then
+      renoise.app():show_error(
+        "The range start position must be before the end position."
+      )
+      return nil
+    end
+    
+    s_pos.sequence = range_start_pos.sequence
+    s_pos.line = range_start_pos.line
+    e_pos.sequence = range_end_pos.sequence
+    e_pos.line = range_end_pos.line
+    
   end
   
   return s_pos, e_pos
