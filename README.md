@@ -23,7 +23,7 @@ BMS creation support tool for Renoise
 
 ## 必要なもの
 * [Renoise 3.1](http://www.renoise.com/ "Home | Renoise")
-* [BMSE](http://ucn.tokonats.net/ "UCN-Soft")、[iBMSC](https://hitkey.nekokan.dyndns.info/ibmsc_ja/ "iBMSC - Home") などの BMSE ClipBoard Object Data Format をサポートしている BMS エディタ
+* [BMSE](http://ucn.tokonats.net/ "UCN-Soft")、[iBMSC](https://hitkey.nekokan.dyndns.info/ibmsc_ja/ "iBMSC - Home") などの BMSE ClipBoard Object Data Format をサポートしている BMS エディタ (iBMSC は Version 3.0.5 Delta 現在、複数レーンの BMS シーケンスには対応していないため、BMSEを推奨する)
 
 ## インストール方法
 1. [Releases](https://github.com/raii-x/Renoise-BMS-Maker/releases "Releases · raii-x/Renoise-BMS-Maker") のページから、最新のバージョンの xrnx ファイルをダウンロードする。
@@ -45,11 +45,9 @@ BMS creation support tool for Renoise
         Pattern Sequencer で選択している範囲
         
         * Selection in Pattern:  
-        **(この設定は実装されていないため、現在は使用できない)**  
-        Pattern Editor で選択している範囲
+        Pattern Editor で選択している範囲。レンダリング時には選択範囲のトラックではなく、カーソルのあるトラックが使われることに注意。
 
         * Custom:  
-        **(この設定は実装されていないため、現在は使用できない)**  
         Sequence 番号と Line 番号を直接指定
 
     * Note Options: 音切りするノートの設定
