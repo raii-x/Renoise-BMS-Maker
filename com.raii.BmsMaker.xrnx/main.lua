@@ -143,7 +143,19 @@ local function get_range()
     e_pos.line = renoise.song():pattern(end_pat_idx).number_of_lines
     
   elseif range_mode == RANGE_MODE_SELECTION_PATTERN then
-    error("not implemented")
+    local seq_idx = renoise.song().selected_sequence_index
+    local range = renoise.song().selection_in_pattern
+    -- No range is selected
+    if range == nil then
+      renoise.app():show_error("Please select a range.")
+      return nil
+    end
+    
+    s_pos.sequence = seq_idx
+    s_pos.line = range.start_line
+    e_pos.sequence = seq_idx
+    e_pos.line = range.end_line
+    
   elseif range_mode == RANGE_MODE_SELECTION_CUSTOM then
     error("not implemented")
   end
