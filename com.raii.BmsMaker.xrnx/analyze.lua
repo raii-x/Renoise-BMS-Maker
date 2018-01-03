@@ -291,6 +291,22 @@ function analyze(trk_idx, note_opts, s_pos, e_pos)
   
   print("analyze", os.clock() - sclock)
   
+  -- Check if the note length exceeds the maximum length of a pattern
+  local release = note_opts.release_lines
+  if release == 0 then
+    -- For note off
+    release = 1
+  end
+  
+  for i, v in ipairs(state.notes) do
+    if #v.lines + release > renoise.Pattern.MAX_NUMBER_OF_LINES then
+      renoise.app():show_error(
+        "The note length exceeds the maximum length of a pattern."
+      )
+      return nil
+    end
+  end
+  
   local bms_data = {
     notes = state.notes,
     order = state.order,

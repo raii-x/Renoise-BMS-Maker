@@ -229,6 +229,10 @@ function make_bms(export_only)
   
   local bms_data = analyze(track_index, note_opts, start_pos, end_pos)
   
+  if bms_data == nil then
+    return
+  end
+  
   if export_only then
     export_to_bmse(file_opts, bms_data)
   else
