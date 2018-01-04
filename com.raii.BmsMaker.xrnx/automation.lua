@@ -1,19 +1,70 @@
--- search_automated_params(trk)
+-- search_automated_params(search_trk_idx)
 -- flatten_points(pat_seq, trk_idx, prm)
 -- slice_points(points, start_pt_idx, s_time, e_time)
 
-
--- The returned params may contain command controled param
-function search_automated_params(trk)
-  local t = table.create()
+local function parent_table_part(tbl, par_idx, members)
+  local idx = par_idx - 1
   
-  for dev_idx, dev in ipairs(trk.devices) do
-    for prm_idx, prm in ipairs(dev.parameters) do
-      if prm.is_automated then
-        t:insert(prm)
-      end
+  while idx >= par_idx - members do
+    local trk = renoise.song():track(idx)
+    
+    tbl[idx] = par_idx
+    
+    if trk.type == renoise.Track.TRACK_TYPE_GROUP then
+      idx = parent_table_part(tbl, idx, #trk.members)
+    else
+      idx = idx - 1
     end
   end
+  
+  return idx
+end
+
+-- Make a table of track indices of group parents
+-- The parent of top level tracks is the master track.
+-- Index of the master track and send tracks is 0.
+local function get_parent_table()
+  local tbl = table.create()
+  for i = 1, #renoise.song().tracks do
+    tbl:insert(0)
+  end
+  
+  local idx = #renoise.song().tracks
+  
+  for idx, trk in ripairs(renoise.song().tracks) do
+    if trk.type == renoise.Track.TRACK_TYPE_MASTER then
+      parent_table_part(tbl, idx, idx - 1)
+      break
+    end
+  end
+  
+  return tbl
+end
+
+-- The returned params may contain command controled param
+-- Returns array of { trk_idx, param }
+function search_automated_params(search_trk_idx)
+  local t = table.create()
+  local parent_table = get_parent_table()
+  
+  for trk_idx, trk in ipairs(renoise.song().tracks) do
+    if trk_idx == search_trk_idx then
+      
+      for dev_idx, dev in ipairs(trk.devices) do
+        for prm_idx, prm in ipairs(dev.parameters) do
+          if prm.is_automated then
+            t:insert {
+              trk_idx = trk_idx,
+              param = prm
+            }
+          end
+        end
+      end
+      
+      search_trk_idx = parent_table[trk_idx]
+    end
+  end
+  
   return t
 end
 
@@ -197,32 +248,3 @@ function slice_points(points, start_pt_idx, s_time, e_time)
   return slice, start_pt_idx
 end
 
-
---------------------------------------------------------------------------------
--- For debug
-
-if false then
-  local trk = renoise.song().selected_track
-  local trk_idx = renoise.song().selected_track_index
-  local pat_seq = renoise.song().sequencer.pattern_sequence
-  
-  local auto_prms = search_automated_params(trk)
-  local auto_pts = table.create()
-  
-  for prm_idx, prm in ipairs(auto_prms) do
-    auto_pts[prm_idx] = flatten_points(pat_seq, trk_idx, prm)
-  end
-  
-  for i, v in ipairs(auto_pts[1]) do
-    print(v.time, v.value)
-  end
-  
-  print("----------")
-  
-  local slice = slice_points(auto_pts[1], 1, 97, 161)
-  for i, v in ipairs(slice) do
-    print(v.time, v.value)
-  end
-  
-  print("----------")
-end
