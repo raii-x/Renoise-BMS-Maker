@@ -52,7 +52,8 @@ function start_rendering(note_opts, file_opts, render_opts,
     
     -- Write automation
     for prm_idx, prm in ipairs(bms_data.automated_params) do
-      local auto = pattrk:create_automation(prm)
+      local auto_pattrk = working_pattern:track(prm.trk_idx)
+      local auto = auto_pattrk:create_automation(prm.param)
       auto.points = note.automation[prm_idx]
     end
     
