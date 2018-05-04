@@ -142,7 +142,7 @@ local function analyze_column(target, state, note_opts)
     -- Automation
     note.automation = table.create()
     for env_idx, env in ipairs(target.auto_envs) do
-      local q = target.auto_prms[env_idx].param.time_quantum
+      local q = target.auto_prms[env_idx].time_quantum
       local nlines = note_opts.release_lines
       if note_opts.duration then
         nlines = nlines + #note.lines
@@ -237,7 +237,7 @@ function analyze(trk_idx, note_opts, s_pos, e_pos)
   local ncol_num = trk.visible_note_columns
   
   -- Automation
-  local auto_prms = search_automated_params(trk_idx)
+  local auto_prms = search_automated_params(trk)
   local auto_envs = table.create()
   
   do
@@ -245,7 +245,7 @@ function analyze(trk_idx, note_opts, s_pos, e_pos)
     
     while prm_idx <= #auto_prms do
       local prm = auto_prms[prm_idx]
-      local env = flatten_points(pat_seq, prm.trk_idx, prm.param)
+      local env = flatten_points(pat_seq, trk_idx, prm)
       
       if env then
         auto_envs[prm_idx] = env
