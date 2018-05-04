@@ -56,16 +56,18 @@ function export_to_bmse(file_opts, bms_data)
           end
           return s
         end,
+        
         tonumber = function(str)
           local c = table.create()
           local n = 0
           c[1], c[2] = str:byte(1, 2)
+          
           for i, v in ipairs(c) do
             -- Capitalize
             if c[i] >= 97 and c[i] <= 122 then
               c[i] = c[i] - 32
             end
-            n = n + (c[i] <= 57 and c[i] - 48 or 10 + (c[i] - 65)) * 36 ^ (2-i)
+            n = n * 36 + (c[i] <= 57 and c[i] - 48 or 10 + (c[i] - 65))
           end
           return n
         end,
