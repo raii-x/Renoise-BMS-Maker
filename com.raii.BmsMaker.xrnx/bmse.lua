@@ -1,3 +1,6 @@
+bmse_start_number = 1
+
+
 local function output(bms_data, start_number, filepath)
   local str = "BMSE ClipBoard Object Data Format\n"
   for i, v in ipairs(bms_data.order) do
@@ -45,7 +48,8 @@ function export_to_bmse(file_opts, bms_data)
         id = "start_number",
         min = 0,
         max = 1295,
-        value = 1,
+        value = bmse_start_number,
+        
         tostring = function(value)
           local n = table.create()
           local s = ""
@@ -71,6 +75,10 @@ function export_to_bmse(file_opts, bms_data)
           end
           return n
         end,
+        
+        notifier = function(value)
+          bmse_start_number = value
+        end,
       },
     },
     
@@ -81,6 +89,8 @@ function export_to_bmse(file_opts, bms_data)
         local filepath = file_opts.directory .. filename
         output(bms_data, vb.views.start_number.value, filepath)
         renoise.app():show_status(("Exported to '%s'."):format(filename))
+        
+        bmse_start_number = vb.views.start_number.value + #bms_data.notes
       end
     },
     
