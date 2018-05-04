@@ -45,7 +45,7 @@ function export_to_bmse(file_opts, bms_data)
         id = "start_number",
         min = 0,
         max = 1295,
-        value = 0,
+        value = 1,
         tostring = function(value)
           local n = table.create()
           local s = ""
