@@ -91,6 +91,9 @@ function export_to_bmse(file_opts, bms_data)
         renoise.app():show_status(("Exported to '%s'."):format(filename))
         
         bmse_start_number = vb.views.start_number.value + #bms_data.notes
+        if bmse_start_number > 1295 then
+          bmse_start_number = 1295
+        end
       end
     },
     
