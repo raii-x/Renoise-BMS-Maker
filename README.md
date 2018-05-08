@@ -22,7 +22,7 @@ BMS creation support tool for Renoise
 * Pattern の最大ライン数である512ライン以上のノートのレンダリング
 
 ## 必要なもの
-* [Renoise 3.1](http://www.renoise.com/ "Home | Renoise")
+* [Renoise 3.1.1](http://www.renoise.com/ "Home | Renoise")
 * [BMSE](http://ucn.tokonats.net/ "UCN-Soft")、[iBMSC](https://hitkey.nekokan.dyndns.info/ibmsc_ja/ "iBMSC - Home") などの BMSE ClipBoard Object Data Format をサポートしている BMS エディタ (iBMSC は Version 3.0.5 Delta 現在、複数レーンの BMS シーケンスには対応していないため、BMSEを推奨する)
 
 ## インストール方法
