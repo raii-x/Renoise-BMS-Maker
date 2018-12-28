@@ -157,7 +157,8 @@ local function get_range()
     e_pos.line = range.end_line
     
   elseif range_mode == RANGE_MODE_CUSTOM then
-    if range_end_pos.sequence > #pat_seq or
+    if range_start_pos.sequence > #pat_seq or
+      range_end_pos.sequence > #pat_seq or
       range_start_pos.line >
         renoise.song():pattern(range_start_pos.sequence).number_of_lines or
       range_end_pos.line >
