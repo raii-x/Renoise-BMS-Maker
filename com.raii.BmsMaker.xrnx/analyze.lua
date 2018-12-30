@@ -1,6 +1,9 @@
 -- Make an array of lines
+-- start_time : lines from start of song
+--              neeeded for automation functions
 local function flatten_lines(pat_seq, trk_idx, s_pos, e_pos)
   local lines = table.create()
+  local pos_list = table.create()
   local start_time = 1
   
   for seq_idx, pat_idx in ipairs(pat_seq) do
@@ -31,12 +34,13 @@ local function flatten_lines(pat_seq, trk_idx, s_pos, e_pos)
   
       for line_idx = s_line_idx, e_line_idx do
         lines:insert(pattrk:line(line_idx))
+        pos_list:insert(renoise.SongPos(seq_idx, line_idx))
       end
       
     end
   end
   
-  return lines, start_time
+  return lines, pos_list, start_time
 end
 
 
@@ -121,7 +125,7 @@ end
 --------------------------------------------------------------------------------
 -- analyze_column
 
-local function analyze_column(target, state, note_opts)
+local function analyze_column(target, state, track_opt)
 
   local lpb = renoise.song().transport.lpb
   local ecol_num = target.trk.visible_effect_columns
@@ -129,6 +133,7 @@ local function analyze_column(target, state, note_opts)
   -- lines, automation, number
   --   lines -> [array of {note_columns, effect_columns} tables]
   local note = nil
+  local note_line_idx = 1
   local note_time
   local pos_bmse = 0
   local time = target.start_time
@@ -139,14 +144,27 @@ local function analyze_column(target, state, note_opts)
   end
   
   local function note_end()
+    local nlines = track_opt.release_lines
+    if not track_opt.one_shot then
+      nlines = nlines + #note.lines
+    end
+
+    -- Check if the note length exceeds the maximum length of a pattern
+    if nlines > renoise.Pattern.MAX_NUMBER_OF_LINES then
+      state.err_exceed:insert(
+        ("Track %02d: %s, Sequence %d, Line %d"):format(
+          track_opt.index, target.trk.name,
+          target.pos_list[note_line_idx].sequence - 1,
+          target.pos_list[note_line_idx].line - 1))
+      
+      note = nil
+      return
+    end
+
     -- Automation
     note.automation = table.create()
     for env_idx, env in ipairs(target.auto_envs) do
       local q = target.auto_prms[env_idx].time_quantum
-      local nlines = note_opts.release_lines
-      if not note_opts.one_shot then
-        nlines = nlines + #note.lines
-      end
       
       if start_pt_idx[env_idx] > #env then debug.start() end
       local slice
@@ -184,6 +202,7 @@ local function analyze_column(target, state, note_opts)
       note = {
         lines = table.create()
       }
+      note_line_idx = line_idx
       note_time = time
       state.order:insert {
         pos = pos_bmse,
@@ -208,7 +227,7 @@ local function analyze_column(target, state, note_opts)
       
       note.lines:insert(noteline)
       
-      if note_opts.one_shot or has_cut(target.trk, noteline) then
+      if track_opt.one_shot or has_cut(target.trk, noteline) then
         note_end()
       end
     end
@@ -225,11 +244,11 @@ local function analyze_column(target, state, note_opts)
 end
 
 --------------------------------------------------------------------------------
--- analyze
+-- analyze_track
 
-function analyze(note_opts, s_pos, e_pos)
+local function analyze_track(track_opt, s_pos, e_pos)
   local pat_seq = renoise.song().sequencer.pattern_sequence
-  local trk = renoise.song():track(note_opts.index)
+  local trk = renoise.song():track(track_opt.index)
   local ncol_num = trk.visible_note_columns
   
   -- Automation
@@ -241,7 +260,7 @@ function analyze(note_opts, s_pos, e_pos)
     
     while prm_idx <= #auto_prms do
       local prm = auto_prms[prm_idx]
-      local env = flatten_points(pat_seq, note_opts.index, prm)
+      local env = flatten_points(pat_seq, track_opt.index, prm)
       
       if env then
         auto_envs[prm_idx] = env
@@ -254,12 +273,13 @@ function analyze(note_opts, s_pos, e_pos)
   end
   
   -- Flatten lines
-  local lines, start_time =
-    flatten_lines(pat_seq, note_opts.index, s_pos, e_pos)
+  local lines, pos_list, start_time =
+    flatten_lines(pat_seq, track_opt.index, s_pos, e_pos)
   
   local target = {
     trk = trk,
     lines = lines,
+    pos_list = pos_list,
     start_time = start_time,
     auto_envs = auto_envs,
     auto_prms = auto_prms,
@@ -272,33 +292,18 @@ function analyze(note_opts, s_pos, e_pos)
     order = table.create(),
     notes_hash = {},
     note_number = 0,
+    err_exceed = table.create(),
   }
   
-  if note_opts.chord_mode then
+  if track_opt.chord_mode then
     target.start_ncol_idx = 1
     target.end_ncol_idx = ncol_num
-    analyze_column(target, state, note_opts)
+    analyze_column(target, state, track_opt)
   else
     for i = 1, ncol_num do
       target.start_ncol_idx = i
       target.end_ncol_idx = i
-      analyze_column(target, state, note_opts)
-    end
-  end
-  
-  -- Check if the note length exceeds the maximum length of a pattern
-  local release = note_opts.release_lines
-  if release == 0 then
-    -- For note off
-    release = 1
-  end
-  
-  for i, v in ipairs(state.notes) do
-    if #v.lines + release > renoise.Pattern.MAX_NUMBER_OF_LINES then
-      renoise.app():show_error(
-        "The note length exceeds the maximum length of a pattern."
-      )
-      return nil
+      analyze_column(target, state, track_opt)
     end
   end
   
@@ -307,6 +312,33 @@ function analyze(note_opts, s_pos, e_pos)
     order = state.order,
     automated_params = auto_prms,
   }
-  return bms_data
+  return bms_data, state.err_exceed
 end
 
+--------------------------------------------------------------------------------
+-- analyze_track
+
+function analyze(en_track_opts, s_pos, e_pos)
+  local bms_data = table.create()
+
+  local err_exceed = table.create()
+
+  for i, track_opt in ipairs(en_track_opts) do
+    local data, exc = analyze_track(track_opt, s_pos, e_pos)
+    bms_data:insert(data)
+
+    for _, v in ipairs(exc) do
+      err_exceed:insert(v)
+    end
+  end
+
+  if #err_exceed >= 1 then
+    renoise.app():show_error(
+      "The note length exceeds the maximum length of a pattern:\n" ..
+      err_exceed:concat("\n")
+    )
+    return nil
+  end
+
+  return bms_data
+end

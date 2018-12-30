@@ -122,33 +122,28 @@ function make_bms(export_only, range_opts, file_opts, render_opts_gui,
     file_opts.directory = file_opts.directory .. [[\]]
   end
   
-  local enabled_track_opts = table.create()
+  local en_track_opts = table.create()
   for _, opt in ipairs(track_opts) do
     if opt.enabled then
-      enabled_track_opts:insert(opt)
+      en_track_opts:insert(opt)
     end
   end
 
-  local bms_data = table.create()
-
-  for i, note_opts in ipairs(enabled_track_opts) do
-    bms_data:insert(analyze(note_opts, start_pos, end_pos))
-  
-    if bms_data[i] == nil then
-      return
-    end
+  local bms_data = analyze(en_track_opts, start_pos, end_pos)
+  if bms_data == nil then
+    return nil
   end
-  
+
   if export_only then
-    export_to_bms(file_opts, enabled_track_opts, bms_data)
+    export_to_bms(file_opts, en_track_opts, bms_data)
   else
     local function get_render_func(i)
       return function()
-        if i > #enabled_track_opts then
+        if i > #en_track_opts then
 
-          export_to_bms(file_opts, enabled_track_opts, bms_data)
+          export_to_bms(file_opts, en_track_opts, bms_data)
         else
-          start_rendering(enabled_track_opts[i], file_opts, render_opts,
+          start_rendering(en_track_opts[i], file_opts, render_opts,
             bms_data[i], get_render_func(i + 1))
         end
       end

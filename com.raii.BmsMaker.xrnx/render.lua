@@ -42,7 +42,8 @@ function start_rendering(note_opts, file_opts, render_opts,
       end
     end
     
-    if not note_opts.one_shot then
+    if not note_opts.one_shot and
+      #note.lines + 1 <= renoise.Pattern.MAX_NUMBER_OF_LINES then
       -- Write note off
       for i = 1, #note.lines[1].note_columns do
         pattrk:line(#note.lines + 1):note_column(i).note_value = 120
@@ -62,13 +63,9 @@ function start_rendering(note_opts, file_opts, render_opts,
       line_num = #note.lines + note_opts.release_lines
     end
     
-    local s_pos = renoise.SongPos()
-    local e_pos = renoise.SongPos()
+    local s_pos = renoise.SongPos(1, 1)
+    local e_pos = renoise.SongPos(1, line_num)
     
-    s_pos.sequence = 1
-    s_pos.line = 1
-    e_pos.sequence = 1
-    e_pos.line = line_num
     -- If s_pos == e_pos, render will be error.
     if e_pos.line <= 1 then
       e_pos.line = 2

@@ -9,14 +9,9 @@ local track_options_page = 1
 
 local range_options = {
   mode = RANGE_MODE_ENTIRE_SONG,
-  start_pos = renoise.SongPos(),
-  end_pos = renoise.SongPos(),
+  start_pos = renoise.SongPos(1, 1),
+  end_pos = renoise.SongPos(1, 1),
 }
-
-range_options.start_pos.sequence = 1
-range_options.start_pos.line = 1
-range_options.end_pos.sequence = 1
-range_options.end_pos.line = 1
 
 local file_options = {
   directory = ""
