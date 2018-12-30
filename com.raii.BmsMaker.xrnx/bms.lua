@@ -14,7 +14,7 @@ local function output(en_track_opts, bms_data, start_number, filepath)
   end
 
   local strs = table.create {
-    "#TITLE Untitled",
+    "#TITLE ",
     ("#BPM %d"):format(renoise.song().transport.bpm),
     "",
     "",
