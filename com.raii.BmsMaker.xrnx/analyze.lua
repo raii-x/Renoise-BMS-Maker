@@ -135,7 +135,7 @@ local function analyze_column(target, state, track_opt)
   local note = nil
   local note_line_idx = 1
   local note_time
-  local pos_bmse = 0
+  local pos_bms = 0
   local time = target.start_time
   local start_pt_idx = table.create()
 
@@ -205,7 +205,7 @@ local function analyze_column(target, state, track_opt)
       note_line_idx = line_idx
       note_time = time
       state.order:insert {
-        pos = pos_bmse,
+        pos = pos_bms,
         column = target.start_ncol_idx,
       }
     end
@@ -232,7 +232,7 @@ local function analyze_column(target, state, track_opt)
       end
     end
     
-    pos_bmse = pos_bmse + 48 / lpb
+    pos_bms = pos_bms + BMS_RESOLUTION / 4 / lpb
     time = time + 1
     
   end

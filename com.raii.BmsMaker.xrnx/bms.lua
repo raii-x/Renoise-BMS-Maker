@@ -7,7 +7,7 @@ local function output(en_track_opts, bms_data, start_number, filepath)
 
   for i_trk, data in ipairs(bms_data) do
     for _, v in ipairs(data.order) do
-      bar_num = math.max(bar_num, 1 + math.floor(v.pos / 192))
+      bar_num = math.max(bar_num, 1 + math.floor(v.pos / BMS_RESOLUTION))
       lane_num = math.max(lane_num,
         en_track_opts[i_trk].bgm_lane + v.column - 1)
     end
@@ -34,10 +34,10 @@ local function output(en_track_opts, bms_data, start_number, filepath)
 
   for i_trk, data in ipairs(bms_data) do
     for _, v in ipairs(data.order) do
-      local bar = 1 + math.floor(v.pos / 192)
+      local bar = 1 + math.floor(v.pos / BMS_RESOLUTION)
       local lane = en_track_opts[i_trk].bgm_lane + v.column - 1
       bars[bar][lane]:insert {
-        pos = v.pos % 192,
+        pos = v.pos % BMS_RESOLUTION,
         number = note_number + v.note.number,
       }
     end
@@ -59,7 +59,7 @@ local function output(en_track_opts, bms_data, start_number, filepath)
     for i_lane, lane in ipairs(bar) do
       
       local t = table.create()
-      for i = 1, 192 do
+      for i = 1, BMS_RESOLUTION do
         t:insert("00")
       end
 
