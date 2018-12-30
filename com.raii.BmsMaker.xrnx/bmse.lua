@@ -1,10 +1,15 @@
 bmse_start_number = 1
 
 
-local function output(bms_data, start_number, filepath)
+local function output(en_track_opts, bms_data, start_number, filepath)
   local str = "BMSE ClipBoard Object Data Format\n"
-  for i, v in ipairs(bms_data.order) do
-    str = str .. ("%d%08d%d\n"):format(101 + (v.column - 1), v.pos, v.note.number + start_number)
+  for i_trk, data in ipairs(bms_data) do
+    for _, v in ipairs(data.order) do
+      str = str .. ("%d%08d%d\n"):format(
+        101 + (en_track_opts[i_trk].bgm_lane - 1) + (v.column - 1),
+        v.pos, v.note.number + start_number)
+    end
+    start_number = start_number + #data.notes
   end
   
   local file = io.open(filepath, "w")
@@ -15,7 +20,7 @@ end
 --------------------------------------------------------------------------------
 -- export_to_bmse
 
-function export_to_bmse(file_opts, bms_data)
+function export_to_bmse(file_opts, en_track_opts, bms_data)
 
   local vb = renoise.ViewBuilder()
   
@@ -87,10 +92,13 @@ function export_to_bmse(file_opts, bms_data)
       notifier = function()
         local filename = vb.views.filename.value
         local filepath = file_opts.directory .. filename
-        output(bms_data, vb.views.start_number.value, filepath)
+        output(en_track_opts, bms_data, vb.views.start_number.value, filepath)
         renoise.app():show_status(("Exported to '%s'."):format(filename))
         
-        bmse_start_number = vb.views.start_number.value + #bms_data.notes
+        bmse_start_number = vb.views.start_number.value
+        for _, data in ipairs(bms_data) do
+          bmse_start_number = bmse_start_number + #data.notes
+        end
         if bmse_start_number > 1295 then
           bmse_start_number = 1295
         end

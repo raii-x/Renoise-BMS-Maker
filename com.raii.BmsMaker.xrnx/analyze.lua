@@ -144,7 +144,7 @@ local function analyze_column(target, state, note_opts)
     for env_idx, env in ipairs(target.auto_envs) do
       local q = target.auto_prms[env_idx].time_quantum
       local nlines = note_opts.release_lines
-      if note_opts.duration then
+      if not note_opts.one_shot then
         nlines = nlines + #note.lines
       end
       
@@ -210,7 +210,7 @@ local function analyze_column(target, state, note_opts)
       
       note.lines:insert(noteline)
       
-      if not note_opts.duration or has_cut(target.trk, noteline) then
+      if note_opts.one_shot or has_cut(target.trk, noteline) then
         note_end()
       end
     end
@@ -229,11 +229,11 @@ end
 --------------------------------------------------------------------------------
 -- analyze
 
-function analyze(trk_idx, note_opts, s_pos, e_pos)
+function analyze(note_opts, s_pos, e_pos)
   local sclock = os.clock()
   
   local pat_seq = renoise.song().sequencer.pattern_sequence
-  local trk = renoise.song():track(trk_idx)
+  local trk = renoise.song():track(note_opts.index)
   local ncol_num = trk.visible_note_columns
   
   -- Automation
@@ -245,7 +245,7 @@ function analyze(trk_idx, note_opts, s_pos, e_pos)
     
     while prm_idx <= #auto_prms do
       local prm = auto_prms[prm_idx]
-      local env = flatten_points(pat_seq, trk_idx, prm)
+      local env = flatten_points(pat_seq, note_opts.index, prm)
       
       if env then
         auto_envs[prm_idx] = env
@@ -258,7 +258,8 @@ function analyze(trk_idx, note_opts, s_pos, e_pos)
   end
   
   -- Flatten lines
-  local lines, start_time = flatten_lines(pat_seq, trk_idx, s_pos, e_pos)
+  local lines, start_time =
+    flatten_lines(pat_seq, note_opts.index, s_pos, e_pos)
   
   local target = {
     trk = trk,
