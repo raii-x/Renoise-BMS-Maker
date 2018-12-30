@@ -156,6 +156,16 @@ function export_to_bms(file_opts, en_track_opts, bms_data)
       text = "Export",
 
       notifier = function()
+        local end_number = vb.views.start_number.value - 1
+        for _, data in ipairs(bms_data) do
+          end_number = end_number + #data.notes
+        end
+
+        if end_number > 1295 then
+          renoise.app():show_error("The WAV definition number exceeds ZZ.")
+          return
+        end
+
         local filename = vb.views.filename.value
         local filepath = file_opts.directory .. filename
 
