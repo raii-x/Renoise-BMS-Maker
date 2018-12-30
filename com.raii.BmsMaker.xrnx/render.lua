@@ -1,8 +1,6 @@
 function start_rendering(note_opts, file_opts, render_opts,
   bms_data, on_end_rendering)
   
-  local overwrite_all = false
-  
   -- Make new pattern
   local pat_idx = renoise.song().sequencer:insert_new_pattern_at(1)
   local working_pattern = renoise.song().patterns[pat_idx]
@@ -25,24 +23,6 @@ function start_rendering(note_opts, file_opts, render_opts,
   
     local filename = ("%s_%03d.wav"):format(note_opts.filename, note_index-1)
 
-    if not overwrite_all and
-      io.exists(
-        file_opts.directory .. filename
-      ) then
-      
-      local pressed = renoise.app():show_prompt(
-        "Make BMS",
-        "Overwrite '" .. filename .. "'?",
-        {"Overwrite", "Overwrite all", "Cancel"}
-      )
-      if pressed == "Cancel" then
-        end_rendering()
-        return
-      elseif pressed == "Overwrite all" then
-        overwrite_all = true
-      end
-    end
-    
     renoise.app():show_status(
       "Rendering '" .. filename .. "'."
     )
@@ -101,7 +81,7 @@ function start_rendering(note_opts, file_opts, render_opts,
         sample_rate = render_opts.sample_rate,
         bit_depth = render_opts.bit_depth,
         interpolation = render_opts.interpolation,
-        priority =render_opts.priority
+        priority = render_opts.priority
       },
       file_opts.directory .. filename,
       function()
