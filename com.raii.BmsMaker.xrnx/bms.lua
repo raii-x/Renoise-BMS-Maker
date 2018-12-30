@@ -154,9 +154,22 @@ function export_to_bms(file_opts, en_track_opts, bms_data)
     
     vb:button {
       text = "Export",
+
       notifier = function()
         local filename = vb.views.filename.value
         local filepath = file_opts.directory .. filename
+
+        if io.exists(filepath) then
+          local pressed = renoise.app():show_prompt(
+            "Make BMS",
+            "Overwrite '" .. filename .. "'?",
+            {"Yes", "No"}
+          )
+          if pressed == "No" then
+            return
+          end
+        end
+
         output(en_track_opts, bms_data, vb.views.start_number.value, filepath)
         renoise.app():show_status(("Exported to '%s'."):format(filename))
       end
