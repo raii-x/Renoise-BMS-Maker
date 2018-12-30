@@ -74,6 +74,7 @@ local function output(en_track_opts, bms_data, start_number, filepath)
 
   strs:insert("")
   strs:insert("")
+  strs:insert("")
   
   local file = io.open(filepath, "w")
   file:write(strs:concat("\n"))
