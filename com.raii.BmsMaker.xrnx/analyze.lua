@@ -156,8 +156,6 @@ local function analyze_column(target, state, note_opts)
     end
     
     local str = note_to_string(target.trk, note)
-    print("note", math.floor((note_time-1)/64), (note_time-1)%64)
-    print(str)
     
     if state.notes_hash[str] == nil then
       state.notes_hash[str] = note
@@ -230,8 +228,6 @@ end
 -- analyze
 
 function analyze(note_opts, s_pos, e_pos)
-  local sclock = os.clock()
-  
   local pat_seq = renoise.song().sequencer.pattern_sequence
   local trk = renoise.song():track(note_opts.index)
   local ncol_num = trk.visible_note_columns
@@ -289,8 +285,6 @@ function analyze(note_opts, s_pos, e_pos)
       analyze_column(target, state, note_opts)
     end
   end
-  
-  print("analyze", os.clock() - sclock)
   
   -- Check if the note length exceeds the maximum length of a pattern
   local release = note_opts.release_lines
