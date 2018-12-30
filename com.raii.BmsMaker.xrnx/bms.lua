@@ -64,7 +64,7 @@ local function output(en_track_opts, bms_data, start_number, filepath)
       end
 
       for _, note in ipairs(lane) do
-        t[note.pos] = tostring36(note.number)
+        t[1 + note.pos] = tostring36(note.number)
       end
 
       -- Add sequence text
