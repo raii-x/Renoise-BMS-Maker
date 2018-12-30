@@ -70,9 +70,10 @@ local function output(en_track_opts, bms_data, start_number, filepath)
       -- Add sequence text
       strs:insert(("#%03d01:%s"):format(i_bar - 1, t:concat()))
     end
+
+    strs:insert("")
   end
 
-  strs:insert("")
   strs:insert("")
   strs:insert("")
   
