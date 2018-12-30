@@ -1,26 +1,89 @@
-bmse_start_number = 1
+bms_start_number = 1
 
 
 local function output(en_track_opts, bms_data, start_number, filepath)
-  local str = "BMSE ClipBoard Object Data Format\n"
+  local bar_num = 0
+  local lane_num = 0
+
   for i_trk, data in ipairs(bms_data) do
     for _, v in ipairs(data.order) do
-      str = str .. ("%d%08d%d\n"):format(
-        101 + (en_track_opts[i_trk].bgm_lane - 1) + (v.column - 1),
-        v.pos, v.note.number + start_number)
+      bar_num = math.max(bar_num, 1 + math.floor(v.pos / 192))
+      lane_num = math.max(lane_num,
+        en_track_opts[i_trk].bgm_lane + v.column - 1)
     end
-    start_number = start_number + #data.notes
+  end
+
+  local strs = table.create {
+    "#TITLE Untitled",
+    ("#BPM %d"):format(renoise.song().transport.bpm),
+    "",
+    "",
+  }
+
+  -- bars[bar][lane]
+  local bars = table.create()
+  for i = 1, bar_num do
+    local t = table.create()
+    for j = 1, lane_num do
+      t:insert(table.create())
+    end
+    bars:insert(t)
+  end
+
+  local note_number = start_number
+
+  for i_trk, data in ipairs(bms_data) do
+    for _, v in ipairs(data.order) do
+      local bar = 1 + math.floor(v.pos / 192)
+      local lane = en_track_opts[i_trk].bgm_lane + v.column - 1
+      bars[bar][lane]:insert {
+        pos = v.pos % 192,
+        number = note_number + v.note.number,
+      }
+    end
+
+    for _, v in ipairs(data.notes) do
+      -- Add wav header text
+      strs:insert(("#WAV%s %s_%03d.wav"):format(
+        tostring36(note_number + v.number), en_track_opts[i_trk].filename,
+        v.number))
+    end
+
+    note_number = note_number + #data.notes
   end
   
+  strs:insert("")
+  strs:insert("")
+
+  for i_bar, bar in ipairs(bars) do
+    for i_lane, lane in ipairs(bar) do
+      
+      local t = table.create()
+      for i = 1, 192 do
+        t:insert("00")
+      end
+
+      for _, note in ipairs(lane) do
+        t[note.pos] = tostring36(note.number)
+      end
+
+      -- Add sequence text
+      strs:insert(("#%03d01:%s"):format(i_bar - 1, t:concat()))
+    end
+  end
+
+  strs:insert("")
+  strs:insert("")
+  
   local file = io.open(filepath, "w")
-  file:write(str)
+  file:write(strs:concat("\n"))
   file:close()
 end
 
 --------------------------------------------------------------------------------
--- export_to_bmse
+-- export_to_bms
 
-function export_to_bmse(file_opts, en_track_opts, bms_data)
+function export_to_bms(file_opts, en_track_opts, bms_data)
 
   local vb = renoise.ViewBuilder()
   
@@ -39,7 +102,7 @@ function export_to_bmse(file_opts, en_track_opts, bms_data)
       vb:textfield {
         width = 120,
         id = "filename",
-        value = "bmse_clipboard.txt",
+        value = "_untitled.bms",
       },
     },
     
@@ -51,9 +114,9 @@ function export_to_bmse(file_opts, en_track_opts, bms_data)
       
       vb:valuebox {
         id = "start_number",
-        min = 0,
+        min = 1,
         max = 1295,
-        value = bmse_start_number,
+        value = bms_start_number,
         
         tostring = function(value)
           local n = table.create()
@@ -82,7 +145,7 @@ function export_to_bmse(file_opts, en_track_opts, bms_data)
         end,
         
         notifier = function(value)
-          bmse_start_number = value
+          bms_start_number = value
         end,
       },
     },
@@ -95,12 +158,12 @@ function export_to_bmse(file_opts, en_track_opts, bms_data)
         output(en_track_opts, bms_data, vb.views.start_number.value, filepath)
         renoise.app():show_status(("Exported to '%s'."):format(filename))
         
-        bmse_start_number = vb.views.start_number.value
+        bms_start_number = vb.views.start_number.value
         for _, data in ipairs(bms_data) do
-          bmse_start_number = bmse_start_number + #data.notes
+          bms_start_number = bms_start_number + #data.notes
         end
-        if bmse_start_number > 1295 then
-          bmse_start_number = 1295
+        if bms_start_number > 1295 then
+          bms_start_number = 1295
         end
       end
     },
@@ -108,6 +171,6 @@ function export_to_bmse(file_opts, en_track_opts, bms_data)
   }
   
   renoise.app():show_custom_dialog(
-    "BMSE Export", dialog_content)
+    "BMS Export", dialog_content)
 end
 

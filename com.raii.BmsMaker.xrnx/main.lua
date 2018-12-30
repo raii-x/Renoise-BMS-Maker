@@ -3,7 +3,7 @@ require "const"
 require "analyze"
 require "automation"
 require "render"
-require "bmse"
+require "bms"
 require "gui"
 
 
@@ -140,13 +140,13 @@ function make_bms(export_only, range_opts, file_opts, render_opts_gui,
   end
   
   if export_only then
-    export_to_bmse(file_opts, enabled_track_opts, bms_data)
+    export_to_bms(file_opts, enabled_track_opts, bms_data)
   else
     local function get_render_func(i)
       return function()
         if i > #enabled_track_opts then
 
-          export_to_bmse(file_opts, enabled_track_opts, bms_data)
+          export_to_bms(file_opts, enabled_track_opts, bms_data)
         else
           start_rendering(enabled_track_opts[i], file_opts, render_opts,
             bms_data[i], get_render_func(i + 1))
