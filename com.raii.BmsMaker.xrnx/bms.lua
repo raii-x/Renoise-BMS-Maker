@@ -157,14 +157,6 @@ function export_to_bms(file_opts, en_track_opts, bms_data)
         local filepath = file_opts.directory .. filename
         output(en_track_opts, bms_data, vb.views.start_number.value, filepath)
         renoise.app():show_status(("Exported to '%s'."):format(filename))
-        
-        bms_start_number = vb.views.start_number.value
-        for _, data in ipairs(bms_data) do
-          bms_start_number = bms_start_number + #data.notes
-        end
-        if bms_start_number > 1295 then
-          bms_start_number = 1295
-        end
       end
     },
     
