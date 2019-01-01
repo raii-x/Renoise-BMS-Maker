@@ -76,7 +76,7 @@ BMS creation support tool for Renoise
         Pattern Sequencer で選択している範囲
         
         * Selection in Pattern:  
-        Pattern Editor で選択している範囲。レンダリング時には選択範囲のトラックではなく、カーソルのあるトラックが使われることに注意。
+        Pattern Editor で選択している範囲。レンダリング時には選択範囲のトラックではなく、Track Options で指定したトラックが使われることに注意。
 
         * Custom:  
         Sequence 番号と Line 番号を直接指定
@@ -112,4 +112,4 @@ Track Options で指定された設定に基づいて各トラックを解析し
 
 1-Shot がオン、Release が 4 の場合、図の (3) の 3 つのノートがレンダリングされる。1-Shot がオンの場合、ノートがあるラインのみが 1 つのノートとしてみなされ、その後のコマンドは使われない。レンダリングの際には、Release ライン数が書き出され、そのライン数分のオートメーションも使われる。
 
-レンダリングする際に使われるノートのデータが全く同じ場合は、それらを同じノートとして扱い、wav ファイルと定義番号を共有する。ここで多重定義は行われないので、必要なら手動で行うか、[Mid2BMS](http://mid2bms.web.fc2.com/ "Mid2BMS BMS Improved Development Environment") などのツールを利用すると良い。
+レンダリングする際に使われるノートのデータが全く同じ場合は、それらを同じノートとして扱い、wav ファイルと定義番号を共有する。ここで多重定義は行われないので、必要なら手動で行うか、[Mid2BMS](http://mid2bms.web.fc2.com/ "Mid2BMS BMS Improved Development Environment") の自動重複定義などを利用すると良い。
