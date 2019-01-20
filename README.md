@@ -54,6 +54,9 @@ BMS creation support tool for Renoise
             * Track:  
             設定の対象のトラック名が表示される。
 
+            * Filename:  
+            wav ファイルの名前を指定。ここで指定した文字列の後に `_***.wav` がつけれられたものがファイル名となる。`***` は3桁の数字である。
+
             * 1-Shot:  
             オンの場合、長さの異なるノートでも同じノートとして扱う。ドラムなどではオンにするとよい。
 
@@ -90,7 +93,7 @@ BMS creation support tool for Renoise
 ここで、このエラーが表示される場合は、レンダリングするノートが長すぎるため wav ファイルを出力することができない。それらノートの開始位置のトラック、シーケンス番号、ライン番号が表示されている。ノートオフを入れるか、1-Shot にチェックを入れることで修正できる。
 
 4. BMS Export ウィンドウで、BMS ファイルを出力する。  
-![BMS Export window](https://raw.githubusercontent.com/raii-x/Renoise-BMS-Maker/images/bmse_export.png)
+![BMS Export window](https://raw.githubusercontent.com/raii-x/Renoise-BMS-Maker/images/bms_export.png)
 
     * File Name:  
     出力する BMS ファイルの名前を指定。
