@@ -316,7 +316,7 @@ local function analyze_track(track_opt, s_pos, e_pos)
 end
 
 --------------------------------------------------------------------------------
--- analyze_track
+-- analyze
 
 function analyze(en_track_opts, s_pos, e_pos)
   local bms_data = table.create()
