@@ -248,3 +248,119 @@ function slice_points(points, start_pt_idx, s_time, e_time)
   return slice, start_pt_idx
 end
 
+--------------------------------------------------------------------------------
+-- Test
+
+if TEST then
+  do
+    local function remove_param(prms)
+      for i, v in ipairs(prms) do
+        prms[i] = v.trk_idx
+      end
+      return prms
+    end
+
+    setup_test(1)
+
+    renoise.song():insert_track_at(2)
+    renoise.song():insert_track_at(3)
+    renoise.song():insert_group_at(4)
+    renoise.song():add_track_to_group(2, 4)
+    renoise.song():add_track_to_group(2, 4)
+    renoise.song():insert_track_at(5)
+    renoise.song():insert_group_at(6)
+    renoise.song():add_track_to_group(4, 6)
+    renoise.song():add_track_to_group(2, 6)
+
+    local pat = renoise.song():pattern(1)
+    for i = 1, 7 do
+      local pattrk = pat:track(i)
+      local prm = renoise.song():track(i):device(1):parameter(1)
+      local auto = pattrk:create_automation(prm)
+      auto:add_point_at(1, 0)
+    end
+
+    -- Group & master track automation test
+
+    assert(table_eq_deep(
+      remove_param(search_automated_params(1)),
+      { 1, 7 }
+    ))
+    assert(table_eq_deep(
+      remove_param(search_automated_params(2)),
+      { 2, 4, 6, 7 }
+    ))
+    assert(table_eq_deep(
+      remove_param(search_automated_params(3)),
+      { 3, 4, 6, 7 }
+    ))
+    assert(table_eq_deep(
+      remove_param(search_automated_params(5)),
+      { 5, 6, 7 }
+    ))
+  end
+
+  do
+    setup_test(3)
+
+    local prm = renoise.song():track(1):device(1):parameter(1)
+
+    local pat_seq = renoise.song().sequencer.pattern_sequence
+
+    local pattrk = {}
+    for i = 1, 3 do
+      pattrk[i] = renoise.song():pattern(i):track(1)
+    end
+    
+    local auto = {}
+    auto[1] = pattrk[1]:create_automation(prm)
+    auto[3] = pattrk[3]:create_automation(prm)
+
+    auto[1]:add_point_at(3, 0)
+    auto[1]:add_point_at(7, 1)
+    auto[1]:add_point_at(11, 0.5)
+    auto[3]:add_point_at(9, 1)
+    local env = flatten_points(pat_seq, 1, prm)
+
+    -- Flatten test
+
+    assert(table_eq_deep(env, {
+      { time = 1, value = 0 },
+      { time = 3, value = 0 },
+      { time = 7, value = 1 },
+      { time = 11, value = 0.5 },
+      { time = 129 - prm.time_quantum, value = 0.5 },
+      { time = 129, value = 1 },
+    }))
+
+    -- Slice tests
+
+    assert(table_eq_deep(
+      slice_points(env, 1, 1, 2), {
+        { time = 1, value = 0 },
+    }))
+
+    assert(table_eq_deep(
+      slice_points(env, 1, 2, 4.5), {
+        { time = 1, value = 0 },
+        { time = 2, value = 0 },
+        { time = 3.5, value = 0.375 },
+    }))
+
+    assert(table_eq_deep(
+      slice_points(env, 1, 2, 4.5), {
+        { time = 1, value = 0 },
+        { time = 2, value = 0 },
+        { time = 3.5, value = 0.375 },
+    }))
+
+    assert(table_eq_deep(
+      slice_points(env, 1, 6, 12), {
+        { time = 1, value = 0.75 },
+        { time = 2, value = 1 },
+        { time = 6, value = 0.5 },
+    }))
+  end
+
+  print("All automation tests have passed.")
+end

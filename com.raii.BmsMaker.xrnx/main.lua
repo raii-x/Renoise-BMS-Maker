@@ -1,3 +1,5 @@
+require "option"
+
 require "util"
 require "const"
 require "analyze"
