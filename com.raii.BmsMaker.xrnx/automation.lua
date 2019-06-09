@@ -115,30 +115,57 @@ function flatten_points(pat_seq, trk_idx, prm)
     if auto then
       local pts = auto.points
       
-      if auto.playmode ~= renoise.PatternTrackAutomation.PLAYMODE_LINEAR then
-        error("Supported only linear interpolation.")
-      end
+      if auto.playmode == renoise.PatternTrackAutomation.PLAYMODE_LINEAR then
       
-      -- If there's no point at the head, add point there
-      if not auto:has_point_at(1) then
-        add_point(fpts, {
-          time = seq_time + 1,
-          value = pts[1].value
-        })
-      end
-      
-      -- Flatten points
-      for pt_idx, pt in ipairs(auto.points) do
-        pt.time = pt.time + seq_time
-        add_point(fpts, pt)
-      end
-      
-      -- If there's no point at the end, add point there
-      if not auto:has_point_at(end_time) then
-        add_point(fpts, {
-          time = seq_time + end_time,
-          value = pts[#pts].value
-        })
+        -- If there's no point at the head, add point there
+        if not auto:has_point_at(1) then
+          add_point(fpts, {
+            time = seq_time + 1,
+            value = pts[1].value
+          })
+        end
+        
+        -- Flatten points
+        for pt_idx, pt in ipairs(auto.points) do
+          pt.time = pt.time + seq_time
+          add_point(fpts, pt)
+        end
+        
+        -- If there's no point at the end, add point there
+        if not auto:has_point_at(end_time) then
+          add_point(fpts, {
+            time = seq_time + end_time,
+            value = pts[#pts].value
+          })
+        end
+
+      elseif auto.playmode == renoise.PatternTrackAutomation.PLAYMODE_POINTS then
+
+        -- Flatten points
+        for pt_idx, pt in ipairs(auto.points) do
+          -- If it's not at the head and there's no point behind time_quantum, add point there
+          if pt.time > 1 and not auto:has_point_at(pt.time - prm.time_quantum) and #fpts > 0 then
+            add_point(fpts, {
+              time = seq_time + pt.time - prm.time_quantum,
+              value = fpts[#fpts].value
+            })
+          end
+
+          pt.time = pt.time + seq_time
+          add_point(fpts, pt)
+        end
+        
+        -- If there's no point at the end, add point there
+        if not auto:has_point_at(end_time) then
+          add_point(fpts, {
+            time = seq_time + end_time,
+            value = pts[#pts].value
+          })
+        end
+
+      else
+        error("Not supported curve interpolation.")
+
       end
       
     -- Without automation
@@ -301,36 +328,51 @@ if TEST then
   end
 
   do
-    setup_test(3)
+    setup_test(5)
 
     local prm = renoise.song():track(1):device(1):parameter(1)
 
     local pat_seq = renoise.song().sequencer.pattern_sequence
 
     local pattrk = {}
-    for i = 1, 3 do
+    for i = 1, 5 do
       pattrk[i] = renoise.song():pattern(i):track(1)
     end
     
     local auto = {}
     auto[1] = pattrk[1]:create_automation(prm)
     auto[3] = pattrk[3]:create_automation(prm)
+    auto[4] = pattrk[4]:create_automation(prm)
+    auto[5] = pattrk[5]:create_automation(prm)
+
+    auto[4].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
+    auto[5].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
 
     auto[1]:add_point_at(3, 0)
     auto[1]:add_point_at(7, 1)
     auto[1]:add_point_at(11, 0.5)
     auto[3]:add_point_at(9, 1)
+    auto[4]:add_point_at(1, 0)
+    auto[4]:add_point_at(2.5, 0.5)
+    auto[5]:add_point_at(5, 1)
+    
     local env = flatten_points(pat_seq, 1, prm)
 
     -- Flatten test
-
+    local q = prm.time_quantum
     assert(table_eq_deep(env, {
       { time = 1, value = 0 },
       { time = 3, value = 0 },
       { time = 7, value = 1 },
       { time = 11, value = 0.5 },
-      { time = 129 - prm.time_quantum, value = 0.5 },
+      { time = 129 - q, value = 0.5 },
       { time = 129, value = 1 },
+      { time = 193 - q, value = 1 },
+      { time = 193, value = 0 },
+      { time = 194.5 - q, value = 0 },
+      { time = 194.5, value = 0.5 },
+      { time = 261 - q, value = 0.5 },
+      { time = 261, value = 1 },
     }))
 
     -- Slice tests

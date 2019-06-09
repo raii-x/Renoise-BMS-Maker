@@ -252,7 +252,7 @@ local function analyze_track(track_opt, s_pos, e_pos)
   local ncol_num = trk.visible_note_columns
   
   -- Automation
-  local auto_prms = search_automated_params(trk_idx)
+  local auto_prms = search_automated_params(track_opt.index)
   local auto_envs = table.create()
   
   do
