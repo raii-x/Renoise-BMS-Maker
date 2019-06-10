@@ -219,6 +219,15 @@ function flatten_points(pat_seq, trk_idx, prm)
 
       elseif auto.playmode == renoise.PatternTrackAutomation.PLAYMODE_POINTS then
 
+        -- If there's no point at the head of song, add point there
+        if seq_idx == 1 and not auto:has_point_at(1) then
+          local val = get_first_value(pat_seq, trk_idx, prm)
+          add_point(fpts, {
+            time = 1,
+            value = pts[1].value
+          })
+        end
+      
         -- Flatten points
         for pt_idx, pt in ipairs(auto.points) do
           -- If it's not at the head and there's no point behind time_quantum, add point there
@@ -445,77 +454,93 @@ if TEST then
   do
     setup_test(5)
 
-    local prm = renoise.song():track(1):device(1):parameter(1)
-
     local pat_seq = renoise.song().sequencer.pattern_sequence
 
     local pattrk = {}
     for i = 1, 5 do
       pattrk[i] = renoise.song():pattern(i):track(1)
     end
-    
-    local auto = {}
-    auto[1] = pattrk[1]:create_automation(prm)
-    auto[3] = pattrk[3]:create_automation(prm)
-    auto[4] = pattrk[4]:create_automation(prm)
-    auto[5] = pattrk[5]:create_automation(prm)
 
-    auto[4].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
-    auto[5].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
+    do
+      local prm = renoise.song():track(1):device(1):parameter(1)
 
-    auto[1]:add_point_at(3, 0)
-    auto[1]:add_point_at(7, 1)
-    auto[1]:add_point_at(11, 0.5)
-    auto[3]:add_point_at(9, 1)
-    auto[4]:add_point_at(1, 0)
-    auto[4]:add_point_at(2.5, 0.5)
-    auto[5]:add_point_at(5, 1)
-    
-    local env = flatten_points(pat_seq, 1, prm)
+      local auto = {}
+      auto[1] = pattrk[1]:create_automation(prm)
+      auto[3] = pattrk[3]:create_automation(prm)
+      auto[4] = pattrk[4]:create_automation(prm)
+      auto[5] = pattrk[5]:create_automation(prm)
 
-    -- Flatten test
-    local q = prm.time_quantum
-    assert(table_eq_deep(env, {
-      { time = 1, value = 0 },
-      { time = 3, value = 0 },
-      { time = 7, value = 1 },
-      { time = 11, value = 0.5 },
-      { time = 129 - q, value = 0.5 },
-      { time = 129, value = 1 },
-      { time = 193 - q, value = 1 },
-      { time = 193, value = 0 },
-      { time = 194.5 - q, value = 0 },
-      { time = 194.5, value = 0.5 },
-      { time = 261 - q, value = 0.5 },
-      { time = 261, value = 1 },
-    }))
+      auto[4].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
+      auto[5].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
 
-    -- Slice tests
+      auto[1]:add_point_at(3, 0)
+      auto[1]:add_point_at(7, 1)
+      auto[1]:add_point_at(11, 0.5)
+      auto[3]:add_point_at(9, 1)
+      auto[4]:add_point_at(1, 0)
+      auto[4]:add_point_at(2.5, 0.5)
+      auto[5]:add_point_at(5, 1)
+      
+      local env = flatten_points(pat_seq, 1, prm)
 
-    assert(table_eq_deep(
-      slice_points(env, 1, 1, 2), {
+      -- Flatten test
+      local q = prm.time_quantum
+      assert(table_eq_deep(env, {
+        { time = 1, value = 0 },
+        { time = 3, value = 0 },
+        { time = 7, value = 1 },
+        { time = 11, value = 0.5 },
+        { time = 129 - q, value = 0.5 },
+        { time = 129, value = 1 },
+        { time = 193 - q, value = 1 },
+        { time = 193, value = 0 },
+        { time = 194.5 - q, value = 0 },
+        { time = 194.5, value = 0.5 },
+        { time = 261 - q, value = 0.5 },
+        { time = 261, value = 1 },
+      }))
+
+      -- Slice tests
+
+      assert(table_eq_deep(
+        slice_points(env, 1, 1, 2), {
+          { time = 1, value = 0 },
+        }))
+
+      assert(table_eq_deep(
+        slice_points(env, 1, 2, 4.5), {
+          { time = 1, value = 0 },
+          { time = 2, value = 0 },
+          { time = 3.5, value = 0.375 },
+        }))
+
+      assert(table_eq_deep(
+        slice_points(env, 1, 6, 12), {
+          { time = 1, value = 0.75 },
+          { time = 2, value = 1 },
+          { time = 6, value = 0.5 },
+        }))
+      
+      assert(table_eq_deep(
+        slice_points(env, 1, 12, 13), {
+          { time = 1, value = 0.5 },
+        }))
+    end
+
+    do
+      local prm = renoise.song():track(1):device(1):parameter(2)
+      local auto = {}
+      auto[1] = pattrk[1]:create_automation(prm)
+      auto[1].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
+
+      auto[1]:add_point_at(3, 0)
+      
+      local env = flatten_points(pat_seq, 1, prm)
+      -- Flatten test
+      assert(table_eq_deep(env, {
         { time = 1, value = 0 },
       }))
-
-    assert(table_eq_deep(
-      slice_points(env, 1, 2, 4.5), {
-        { time = 1, value = 0 },
-        { time = 2, value = 0 },
-        { time = 3.5, value = 0.375 },
-      }))
-
-    assert(table_eq_deep(
-      slice_points(env, 1, 6, 12), {
-        { time = 1, value = 0.75 },
-        { time = 2, value = 1 },
-        { time = 6, value = 0.5 },
-      }))
-    
-    assert(table_eq_deep(
-      slice_points(env, 1, 12, 13), {
-        { time = 1, value = 0.5 },
-      }))
-
+    end
   end
 
   do
