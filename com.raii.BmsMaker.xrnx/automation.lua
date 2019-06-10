@@ -55,18 +55,28 @@ function search_automated_params(search_trk_idx)
           if prm.is_automated then
 
             local linear = true
-            if prm.value_quantum ~= 0 or (
-              trk.type == renoise.Track.TRACK_TYPE_MASTER and
-              dev_idx == 1 and
-              prm_idx == 6) then
+            local tag = nil
 
+            if prm.value_quantum ~= 0 then
               linear = false
+            end
+            
+            if trk.type == renoise.Track.TRACK_TYPE_MASTER and dev_idx == 1 then
+              if prm_idx == 6 then
+                linear = false
+                tag = "BPM"
+              elseif prm_idx == 7 then
+                tag = "LPB"
+              elseif prm_idx == 8 then
+                tag = "TPL"
+              end
             end
             
             t:insert {
               trk_idx = trk_idx,
               param = prm,
               linear = linear,
+              tag = tag,
             }
           end
         end
