@@ -109,3 +109,8 @@ function table_eq_deep(a, b, value_map)
 
   return true
 end
+
+-- Quantize by q.
+function quantize(x, q)
+  return math.floor(x / q + 0.5) * q
+end

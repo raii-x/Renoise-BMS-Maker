@@ -44,11 +44,6 @@ local function flatten_lines(pat_seq, trk_idx, s_pos, e_pos)
 end
 
 
-local function quantize_value(x)
-  return math.floor(x * 256 + 0.5) / 256
-end
-
-
 local function note_to_string(trk, note)
   local str = ""
 
@@ -78,7 +73,7 @@ local function note_to_string(trk, note)
   
   for env_idx, env in ipairs(note.automation) do
     for pt_idx, pt in ipairs(env) do
-      str = str .. ("%.2f,%.3f,"):format(pt.time, quantize_value(pt.value))
+      str = str .. ("%.3f,%.5f,"):format(pt.time, quantize(pt.value, 1 / 0x10000))
     end
     str = str .. "\n"
   end
