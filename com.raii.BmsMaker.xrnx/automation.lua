@@ -350,7 +350,7 @@ local function slice_points_quantum(points, start_pt_idx, s_time, e_time)
   for pt_idx = start_pt_idx+1, #points do
     local pt = points[pt_idx]
     
-    if pt.time >= e_time then
+    if pt.time > e_time then
       break
     end
       
@@ -371,6 +371,7 @@ local function interpolate_points(pt1, pt2, time)
 end
 
 
+-- s_time and e_time are inclusive
 function slice_points(linear, points, start_pt_idx, s_time, e_time)
   if not linear then
     return slice_points_quantum(points, start_pt_idx, s_time, e_time)
