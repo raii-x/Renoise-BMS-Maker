@@ -263,12 +263,14 @@ local function analyze_track(track_opt, s_pos, e_pos)
       local prm = auto_prms[prm_idx]
       local env = flatten_points(pat_seq, prm.trk_idx, prm.param, prm.linear)
       
-      if env then
+      if env == false then
+        return nil
+      elseif env == nil then
+        -- Command controled parameter
+        auto_prms:remove(prm_idx)
+      else
         auto_envs[prm_idx] = env
         prm_idx = prm_idx + 1
-      -- Command controled parameter
-      else
-        auto_prms:remove(prm_idx)
       end
     end
   end
@@ -326,6 +328,9 @@ function analyze(en_track_opts, s_pos, e_pos)
 
   for i, track_opt in ipairs(en_track_opts) do
     local data, exc = analyze_track(track_opt, s_pos, e_pos)
+    if data == nil then
+      return nil
+    end
     bms_data:insert(data)
 
     for _, v in ipairs(exc) do

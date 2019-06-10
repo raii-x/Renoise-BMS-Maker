@@ -125,6 +125,7 @@ local function flatten_points_quantum(pat_seq, trk_idx, prm)
   -- If parameter is BPM, LPB, or TPL, Renoise changes value
   -- to first value of pattern automations on heads of each patterns.
   -- Otherwise Renoise keeps current value on heads of each patterns.
+  -- If error, return false.
   local head_write = false
   if prm.name == "BPM" or prm.name == "LPB" or prm.name == "TPL" then
     head_write = true;
@@ -144,8 +145,10 @@ local function flatten_points_quantum(pat_seq, trk_idx, prm)
       local pts = auto.points
       
       if auto.playmode ~= renoise.PatternTrackAutomation.PLAYMODE_POINTS then
-        error(("Track %02d: %s, Sequence %d: Interpolation mode needs to be \"Points\".")
+        renoise.app():show_error(
+          ("Track %02d: %s, Sequence %d: Interpolation mode needs to be \"Points\".")
           :format(trk_idx, renoise.song():track(trk_idx).name, seq_idx - 1))
+        return false
       end
       
       if head_write then
@@ -187,6 +190,8 @@ local function add_point(table, point)
 end
 
 
+-- If there's no automation, return nil.
+-- If error, return false.
 function flatten_points(pat_seq, trk_idx, prm, linear)
   if not linear then
     return flatten_points_quantum(pat_seq, trk_idx, prm)
@@ -266,8 +271,10 @@ function flatten_points(pat_seq, trk_idx, prm, linear)
         end
 
       else
-        error(("Track %02d: %s, Sequence %d: \"Curve\" interpolation mode isn't supported.")
+        renoise.app():show_error(
+          ("Track %02d: %s, Sequence %d: \"Curve\" interpolation mode isn't supported.")
           :format(trk_idx, renoise.song():track(trk_idx).name, seq_idx - 1))
+        return false
 
       end
       
