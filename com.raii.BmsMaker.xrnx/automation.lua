@@ -83,6 +83,84 @@ local function get_first_value(pat_seq, trk_idx, prm)
 end
 
 
+local function add_point_quantum(table, point)
+  -- Same value 2 points -> 1 point
+  if #table >= 1 then
+    if table[#table].value == point.value then
+      return
+    end
+  end
+  
+  table:insert(point)
+end
+
+
+local function flatten_points_quantum(pat_seq, trk_idx, prm)
+  local fpts = table.create()
+  
+  do
+    local val = get_first_value(pat_seq, trk_idx, prm)
+    -- If there's no automation, return nil
+    if not val then
+      return nil
+    end
+    -- Add first point at the head of song
+    add_point_quantum(fpts, {
+      time = 1,
+      value = val
+    })
+  end
+
+  -- If parameter is BPM, LPB, or TPL, Renoise changes value
+  -- to first value of pattern automations on heads of each patterns.
+  -- Otherwise Renoise keeps current value on heads of each patterns.
+  local head_write = false
+  if prm.name == "BPM" or prm.name == "LPB" or prm.name == "TPL" then
+    head_write = true;
+  end
+
+  -- Iterate sequences
+  local seq_time = 0
+  for seq_idx, pat_idx in ipairs(pat_seq) do
+    local pat = renoise.song():pattern(pat_idx)
+    local pattrk = pat:track(trk_idx)
+    
+    local nlines = pat.number_of_lines
+    
+    local auto = pattrk:find_automation(prm)
+
+    if auto then
+      local pts = auto.points
+      
+      if auto.playmode ~= renoise.PatternTrackAutomation.PLAYMODE_POINTS then
+        error(("Track %02d: %s, Sequence %d: Interpolation mode needs to be \"Points\".")
+          :format(trk_idx, renoise.song():track(trk_idx).name, seq_idx - 1))
+      end
+      
+      if head_write then
+        -- If there's no point at the head, add point there
+        if not auto:has_point_at(1) then
+          add_point_quantum(fpts, {
+            time = seq_time + 1,
+            value = pts[1].value
+          })
+        end        
+      end
+
+      -- Flatten points
+      for pt_idx, pt in ipairs(auto.points) do
+        pt.time = pt.time + seq_time
+        add_point_quantum(fpts, pt)
+      end
+    end
+    
+    seq_time = seq_time + nlines
+  end
+  
+  return fpts
+end
+
+
 local function add_point(table, point)
   -- Same value 3 points -> 2 points
   if #table >= 2 then
@@ -164,7 +242,8 @@ function flatten_points(pat_seq, trk_idx, prm)
         end
 
       else
-        error("Not supported curve interpolation.")
+        error(("Track %02d: %s, Sequence %d: \"Curve\" interpolation mode isn't supported.")
+          :format(trk_idx, renoise.song():track(trk_idx).name, seq_idx - 1))
 
       end
       
@@ -199,7 +278,7 @@ function flatten_points(pat_seq, trk_idx, prm)
       fpts:remove()
     end
   end
-  
+
   return fpts
 end
 
@@ -404,5 +483,68 @@ if TEST then
     }))
   end
 
-  print("All automation tests have passed.")
+  do
+    setup_test(3)
+
+    local pat_seq = renoise.song().sequencer.pattern_sequence
+
+    local pattrk = {}
+    for i = 1, 3 do
+      pattrk[i] = renoise.song():pattern(i):track(2)
+    end
+
+    do
+      local prm = renoise.song():track(2):device(1):parameter(1)
+
+      local auto = {}
+      auto[1] = pattrk[1]:create_automation(prm)
+      auto[3] = pattrk[3]:create_automation(prm)
+
+      auto[1].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
+      auto[3].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
+
+      auto[1]:add_point_at(3, 0)
+      auto[1]:add_point_at(7, 1)
+      auto[1]:add_point_at(11, 0.5)
+      auto[3]:add_point_at(9, 1)
+      
+      local env = flatten_points_quantum(pat_seq, 2, prm)
+
+      -- Flatten test
+      assert(table_eq_deep(env, {
+        { time = 1, value = 0 },
+        { time = 7, value = 1 },
+        { time = 11, value = 0.5 },
+        { time = 137, value = 1 },
+      }))
+    end
+
+    do
+      local prm = renoise.song():track(2):device(1):parameter(6) -- BPM
+
+      local auto = {}
+      auto[1] = pattrk[1]:create_automation(prm)
+      auto[3] = pattrk[3]:create_automation(prm)
+
+      auto[1].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
+      auto[3].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
+
+      auto[1]:add_point_at(3, 0)
+      auto[1]:add_point_at(7, 1)
+      auto[1]:add_point_at(11, 0.5)
+      auto[3]:add_point_at(9, 1)
+      
+      local env = flatten_points_quantum(pat_seq, 2, prm)
+
+      -- Flatten test
+      assert(table_eq_deep(env, {
+        { time = 1, value = 0 },
+        { time = 7, value = 1 },
+        { time = 11, value = 0.5 },
+        { time = 129, value = 1 }, -- Not at the point but at the head of the pattern
+      }))
+    end
+  end
+
+  print("All automation tests passed.")
 end
