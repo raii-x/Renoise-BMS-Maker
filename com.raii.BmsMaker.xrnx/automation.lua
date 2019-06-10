@@ -283,13 +283,7 @@ function flatten_points(pat_seq, trk_idx, prm)
 end
 
 
-local function interpolate_points(pt1, pt2, time)
-  return pt1.value + (time - pt1.time) *
-    ((pt2.value - pt1.value) / (pt2.time - pt1.time))
-end
-
-
-function slice_points(points, start_pt_idx, s_time, e_time)
+local function get_first_slice_point(points, start_pt_idx, s_time)
   -- Search the necessary point to get the start value
   -- in the time range given by s_time and e_time (Update start_pt_idx)
   -- The search start from start_pt_idx
@@ -306,6 +300,48 @@ function slice_points(points, start_pt_idx, s_time, e_time)
       break
     end
   end
+
+  return start_pt_idx
+end
+
+
+local function slice_points_quantum(points, start_pt_idx, s_time, e_time)
+  start_pt_idx = get_first_slice_point(points, start_pt_idx, s_time)
+  
+  local slice = table.create()
+
+  -- Slice
+  slice:insert {
+    time = 1,
+    value = points[start_pt_idx].value
+  }
+
+  for pt_idx = start_pt_idx+1, #points do
+    local pt = points[pt_idx]
+    
+    if pt.time >= e_time then
+      break
+    end
+      
+    -- Get a value in the time range and make a point
+    slice:insert {
+      time = 1 + (pt.time - s_time),
+      value = pt.value
+    }
+  end
+
+  return slice, start_pt_idx
+end
+
+
+local function interpolate_points(pt1, pt2, time)
+  return pt1.value + (time - pt1.time) *
+    ((pt2.value - pt1.value) / (pt2.time - pt1.time))
+end
+
+
+function slice_points(points, start_pt_idx, s_time, e_time)
+  start_pt_idx = get_first_slice_point(points, start_pt_idx, s_time)
   
   local slice = table.create()
 
@@ -459,28 +495,27 @@ if TEST then
     assert(table_eq_deep(
       slice_points(env, 1, 1, 2), {
         { time = 1, value = 0 },
-    }))
+      }))
 
     assert(table_eq_deep(
       slice_points(env, 1, 2, 4.5), {
         { time = 1, value = 0 },
         { time = 2, value = 0 },
         { time = 3.5, value = 0.375 },
-    }))
-
-    assert(table_eq_deep(
-      slice_points(env, 1, 2, 4.5), {
-        { time = 1, value = 0 },
-        { time = 2, value = 0 },
-        { time = 3.5, value = 0.375 },
-    }))
+      }))
 
     assert(table_eq_deep(
       slice_points(env, 1, 6, 12), {
         { time = 1, value = 0.75 },
         { time = 2, value = 1 },
         { time = 6, value = 0.5 },
-    }))
+      }))
+    
+    assert(table_eq_deep(
+      slice_points(env, 1, 12, 13), {
+        { time = 1, value = 0.5 },
+      }))
+
   end
 
   do
@@ -517,6 +552,26 @@ if TEST then
         { time = 11, value = 0.5 },
         { time = 137, value = 1 },
       }))
+    
+      -- Slice tests
+
+      assert(table_eq_deep(
+        slice_points_quantum(env, 1, 1, 2), {
+          { time = 1, value = 0 },
+        }))
+  
+      assert(table_eq_deep(
+        slice_points_quantum(env, 1, 6, 12), {
+          { time = 1, value = 0 },
+          { time = 2, value = 1 },
+          { time = 6, value = 0.5 },
+        }))
+
+      assert(table_eq_deep(
+        slice_points_quantum(env, 1, 12, 13), {
+          { time = 1, value = 0.5 },
+        }))
+  
     end
 
     do
