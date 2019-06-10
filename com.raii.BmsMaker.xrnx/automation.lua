@@ -1,6 +1,6 @@
 -- search_automated_params(search_trk_idx)
--- flatten_points(pat_seq, trk_idx, prm)
--- slice_points(points, start_pt_idx, s_time, e_time)
+-- flatten_points(pat_seq, trk_idx, prm, linear)
+-- slice_points(linear, points, start_pt_idx, s_time, e_time)
 
 local function parent_table_part(tbl, par_idx, members)
   local idx = par_idx - 1
@@ -49,13 +49,24 @@ function search_automated_params(search_trk_idx)
   
   for trk_idx, trk in ipairs(renoise.song().tracks) do
     if trk_idx == search_trk_idx then
-      
+
       for dev_idx, dev in ipairs(trk.devices) do
         for prm_idx, prm in ipairs(dev.parameters) do
           if prm.is_automated then
+
+            local linear = true
+            if prm.value_quantum ~= 0 or (
+              trk.type == renoise.Track.TRACK_TYPE_MASTER and
+              dev_idx == 1 and
+              prm_idx == 6) then
+
+              linear = false
+            end
+            
             t:insert {
               trk_idx = trk_idx,
-              param = prm
+              param = prm,
+              linear = linear,
             }
           end
         end
@@ -176,7 +187,11 @@ local function add_point(table, point)
 end
 
 
-function flatten_points(pat_seq, trk_idx, prm)
+function flatten_points(pat_seq, trk_idx, prm, linear)
+  if not linear then
+    return flatten_points_quantum(pat_seq, trk_idx, prm)
+  end
+
   local fpts = table.create()
   
   -- Iterate sequences
@@ -349,7 +364,11 @@ local function interpolate_points(pt1, pt2, time)
 end
 
 
-function slice_points(points, start_pt_idx, s_time, e_time)
+function slice_points(linear, points, start_pt_idx, s_time, e_time)
+  if not linear then
+    return slice_points_quantum(points, start_pt_idx, s_time, e_time)
+  end
+
   start_pt_idx = get_first_slice_point(points, start_pt_idx, s_time)
   
   local slice = table.create()
@@ -481,7 +500,7 @@ if TEST then
       auto[4]:add_point_at(2.5, 0.5)
       auto[5]:add_point_at(5, 1)
       
-      local env = flatten_points(pat_seq, 1, prm)
+      local env = flatten_points(pat_seq, 1, prm, true)
 
       -- Flatten test
       local q = prm.time_quantum
@@ -503,26 +522,26 @@ if TEST then
       -- Slice tests
 
       assert(table_eq_deep(
-        slice_points(env, 1, 1, 2), {
+        slice_points(true, env, 1, 1, 2), {
           { time = 1, value = 0 },
         }))
 
       assert(table_eq_deep(
-        slice_points(env, 1, 2, 4.5), {
+        slice_points(true, env, 1, 2, 4.5), {
           { time = 1, value = 0 },
           { time = 2, value = 0 },
           { time = 3.5, value = 0.375 },
         }))
 
       assert(table_eq_deep(
-        slice_points(env, 1, 6, 12), {
+        slice_points(true, env, 1, 6, 12), {
           { time = 1, value = 0.75 },
           { time = 2, value = 1 },
           { time = 6, value = 0.5 },
         }))
       
       assert(table_eq_deep(
-        slice_points(env, 1, 12, 13), {
+        slice_points(true, env, 1, 12, 13), {
           { time = 1, value = 0.5 },
         }))
     end
@@ -535,7 +554,7 @@ if TEST then
 
       auto[1]:add_point_at(3, 0)
       
-      local env = flatten_points(pat_seq, 1, prm)
+      local env = flatten_points(pat_seq, 1, prm, true)
       -- Flatten test
       assert(table_eq_deep(env, {
         { time = 1, value = 0 },
@@ -568,7 +587,7 @@ if TEST then
       auto[1]:add_point_at(11, 0.5)
       auto[3]:add_point_at(9, 1)
       
-      local env = flatten_points_quantum(pat_seq, 2, prm)
+      local env = flatten_points(pat_seq, 2, prm, false)
 
       -- Flatten test
       assert(table_eq_deep(env, {
@@ -581,19 +600,19 @@ if TEST then
       -- Slice tests
 
       assert(table_eq_deep(
-        slice_points_quantum(env, 1, 1, 2), {
+        slice_points(false, env, 1, 1, 2), {
           { time = 1, value = 0 },
         }))
   
       assert(table_eq_deep(
-        slice_points_quantum(env, 1, 6, 12), {
+        slice_points(false, env, 1, 6, 12), {
           { time = 1, value = 0 },
           { time = 2, value = 1 },
           { time = 6, value = 0.5 },
         }))
 
       assert(table_eq_deep(
-        slice_points_quantum(env, 1, 12, 13), {
+        slice_points(false, env, 1, 12, 13), {
           { time = 1, value = 0.5 },
         }))
   
@@ -614,7 +633,7 @@ if TEST then
       auto[1]:add_point_at(11, 0.5)
       auto[3]:add_point_at(9, 1)
       
-      local env = flatten_points_quantum(pat_seq, 2, prm)
+      local env = flatten_points(pat_seq, 2, prm, false)
 
       -- Flatten test
       assert(table_eq_deep(env, {

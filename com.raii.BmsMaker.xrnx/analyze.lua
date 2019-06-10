@@ -164,12 +164,13 @@ local function analyze_column(target, state, track_opt)
     -- Automation
     note.automation = table.create()
     for env_idx, env in ipairs(target.auto_envs) do
-      local q = target.auto_prms[env_idx].param.time_quantum
+      local prm = target.auto_prms[env_idx]
+      local q = prm.param.time_quantum
       
       if start_pt_idx[env_idx] > #env then debug.start() end
       local slice
       slice, start_pt_idx[env_idx] = slice_points(
-        env, start_pt_idx[env_idx], note_time, note_time + nlines - q)
+        prm.linear, env, start_pt_idx[env_idx], note_time, note_time + nlines - q)
       note.automation:insert(slice)
     end
     
@@ -260,7 +261,7 @@ local function analyze_track(track_opt, s_pos, e_pos)
     
     while prm_idx <= #auto_prms do
       local prm = auto_prms[prm_idx]
-      local env = flatten_points(pat_seq, prm.trk_idx, prm.param)
+      local env = flatten_points(pat_seq, prm.trk_idx, prm.param, prm.linear)
       
       if env then
         auto_envs[prm_idx] = env
