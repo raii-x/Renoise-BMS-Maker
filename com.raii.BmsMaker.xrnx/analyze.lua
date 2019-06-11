@@ -243,8 +243,11 @@ local function analyze_column(target, state, track_opt)
 
       pos_beat_nume = pos_beat_nume * (deno / pos_beat_deno)
       pos_beat_deno = deno
-      
+    
       pos_beat_nume = pos_beat_nume + pos_beat_deno / lpb
+      
+    else
+      pos_beat_nume = pos_beat_nume + 1
     end
 
     time = time + 1
