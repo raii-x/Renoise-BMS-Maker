@@ -134,7 +134,7 @@ local function analyze_column(target, state, track_opt)
   local time = target.start_time
   local start_pt_idx = table.create()
 
-  for i = 1, #target.auto_envs do
+  for i = 1, #target.auto_prms do
     start_pt_idx[i] = 1
   end
   
@@ -158,14 +158,12 @@ local function analyze_column(target, state, track_opt)
 
     -- Automation
     note.automation = table.create()
-    for env_idx, env in ipairs(target.auto_envs) do
-      local prm = target.auto_prms[env_idx]
+    for prm_idx, prm in ipairs(target.auto_prms) do
       local q = prm.param.time_quantum
       
-      if start_pt_idx[env_idx] > #env then debug.start() end
       local slice
-      slice, start_pt_idx[env_idx] = slice_points(
-        prm.linear, env, start_pt_idx[env_idx], note_time, note_time + nlines - q)
+      slice, start_pt_idx[prm_idx] = slice_points(
+        prm.linear, prm.envelope, start_pt_idx[prm_idx], note_time, note_time + nlines - q)
       note.automation:insert(slice)
     end
     
@@ -239,36 +237,17 @@ local function analyze_column(target, state, track_opt)
   
 end
 
+
 --------------------------------------------------------------------------------
 -- analyze_track
 
-local function analyze_track(track_opt, s_pos, e_pos)
+local function analyze_track(track_opt, params, param_tags, s_pos, e_pos)
   local pat_seq = renoise.song().sequencer.pattern_sequence
   local trk = renoise.song():track(track_opt.index)
   local ncol_num = trk.visible_note_columns
   
   -- Automation
-  local auto_prms = search_automated_params(track_opt.index)
-  local auto_envs = table.create()
-  
-  do
-    local prm_idx = 1
-    
-    while prm_idx <= #auto_prms do
-      local prm = auto_prms[prm_idx]
-      local env = flatten_points(pat_seq, prm.trk_idx, prm.param, prm.linear)
-      
-      if env == false then
-        return nil
-      elseif env == nil then
-        -- Command controled parameter
-        auto_prms:remove(prm_idx)
-      else
-        auto_envs[prm_idx] = env
-        prm_idx = prm_idx + 1
-      end
-    end
-  end
+  local auto_prms = filter_track_params(params, track_opt.index)
   
   -- Flatten lines
   local lines, pos_list, start_time =
@@ -279,8 +258,8 @@ local function analyze_track(track_opt, s_pos, e_pos)
     lines = lines,
     pos_list = pos_list,
     start_time = start_time,
-    auto_envs = auto_envs,
     auto_prms = auto_prms,
+    param_tags = param_tags,
     start_ncol_idx = nil,
     end_ncol_idx = nil,
   }
@@ -317,15 +296,17 @@ end
 -- analyze
 
 function analyze(en_track_opts, s_pos, e_pos)
+  local params, param_tags = flatten_all_params()
+  if params == nil then
+    return nil
+  end
+
   local bms_data = table.create()
 
   local err_exceed = table.create()
 
   for i, track_opt in ipairs(en_track_opts) do
-    local data, exc = analyze_track(track_opt, s_pos, e_pos)
-    if data == nil then
-      return nil
-    end
+    local data, exc = analyze_track(track_opt, params, param_tags, s_pos, e_pos)
     bms_data:insert(data)
 
     for _, v in ipairs(exc) do

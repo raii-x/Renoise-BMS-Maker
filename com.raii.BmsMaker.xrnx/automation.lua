@@ -41,45 +41,79 @@ local function get_parent_table()
   return tbl
 end
 
--- The returned params may contain command controled param
--- Returns array of { trk_idx, param }
-function search_automated_params(search_trk_idx)
-  local t = table.create()
-  local parent_table = get_parent_table()
-  
+
+function flatten_all_params()
+  local params = table.create()
+  local param_tags = {}
+
+  local pat_seq = renoise.song().sequencer.pattern_sequence
+
   for trk_idx, trk in ipairs(renoise.song().tracks) do
-    if trk_idx == search_trk_idx then
+    local t = table.create()
 
-      for dev_idx, dev in ipairs(trk.devices) do
-        for prm_idx, prm in ipairs(dev.parameters) do
-          if prm.is_automated then
+    for dev_idx, dev in ipairs(trk.devices) do
+      for prm_idx, prm in ipairs(dev.parameters) do
+        if prm.is_automated then
 
-            local linear = true
-            local tag = nil
+          local linear = true
+          local tag = nil
 
-            if prm.value_quantum ~= 0 then
+          if prm.value_quantum ~= 0 then
+            linear = false
+          end
+          
+          if trk.type == renoise.Track.TRACK_TYPE_MASTER and dev_idx == 1 then
+            if prm_idx == 6 then
               linear = false
+              tag = "BPM"
+            elseif prm_idx == 7 then
+              tag = "LPB"
+            elseif prm_idx == 8 then
+              tag = "TPL"
             end
-            
-            if trk.type == renoise.Track.TRACK_TYPE_MASTER and dev_idx == 1 then
-              if prm_idx == 6 then
-                linear = false
-                tag = "BPM"
-              elseif prm_idx == 7 then
-                tag = "LPB"
-              elseif prm_idx == 8 then
-                tag = "TPL"
-              end
-            end
-            
-            t:insert {
+          end
+
+          local env = flatten_points(pat_seq, trk_idx, prm, linear)
+  
+          if env == false then
+            -- Error
+            return nil
+          elseif env ~= nil then
+            -- Not command controled parameter
+            local p = {
               trk_idx = trk_idx,
               param = prm,
               linear = linear,
               tag = tag,
+              envelope = env,
             }
+            t:insert(p)
+
+            if tag ~= nil then
+              param_tags[tag] = p
+            end
           end
+      
         end
+      end
+    end
+
+    params:insert(t)
+  end
+
+  return params, param_tags
+end
+
+
+function filter_track_params(params, search_trk_idx)
+  local t = table.create()
+  local parent_table = get_parent_table()
+
+  for trk_idx, prms in ipairs(params) do
+    if trk_idx == search_trk_idx then
+
+      for i, p in ipairs(prms) do
+        t:insert(p)
       end
       
       search_trk_idx = parent_table[trk_idx]
