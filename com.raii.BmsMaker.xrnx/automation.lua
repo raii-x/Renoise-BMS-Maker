@@ -67,7 +67,7 @@ local function flatten_points_quantum(pat_seq, trk_idx, prm)
       
       if auto.playmode ~= renoise.PatternTrackAutomation.PLAYMODE_POINTS then
         renoise.app():show_error(
-          ("Track %02d: %s, Sequence %d: Interpolation mode needs to be \"Points\".")
+          ("Track %02d: %s, Sequence %d: BPM interpolation mode needs to be \"Points\".")
           :format(trk_idx, renoise.song():track(trk_idx).name, seq_idx - 1))
         return false
       end
