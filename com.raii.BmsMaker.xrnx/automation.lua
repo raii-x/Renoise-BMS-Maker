@@ -1,7 +1,3 @@
--- search_automated_params(search_trk_idx)
--- flatten_points(pat_seq, trk_idx, prm, linear)
--- slice_points(linear, points, start_pt_idx, s_time, e_time)
-
 local function parent_table_part(tbl, par_idx, members)
   local idx = par_idx - 1
   
