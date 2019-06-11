@@ -117,6 +117,32 @@ local function has_cut(trk, noteline)
   return false
 end
 
+local function update_pos_beat(nume, deno, prm_lpb, lpb_pt_idx, time, max_line)
+  if prm_lpb ~= nil then
+    local lpb
+    lpb, lpb_pt_idx = get_value_in_points(
+      prm_lpb.linear, prm_lpb.envelope, lpb_pt_idx, time)
+    lpb = quantize(prm_lpb.param.value_min +
+      lpb * (prm_lpb.param.value_max - prm_lpb.param.value_min))
+    
+    local d = lcm(lpb, deno)
+    if d > 0x10000000000000 / max_line then
+      renoise.app():show_error("Least common multiple of LPBs is too big.")
+      return nil
+    end
+
+    nume = nume * (d / deno)
+    deno = d
+
+    nume = nume + deno / lpb
+        
+  else
+    nume = nume + 1
+  end
+
+  return nume, deno, lpb_pt_idx
+end
+
 --------------------------------------------------------------------------------
 -- analyze_column
 
@@ -227,27 +253,11 @@ local function analyze_column(target, state, track_opt)
       end
     end
     
-    -- Update beat position
-    if prm_lpb ~= nil then
-      local lpb
-      lpb, lpb_pt_idx = get_value_in_points(
-        prm_lpb.linear, prm_lpb.envelope, lpb_pt_idx, time)
-      lpb = quantize(prm_lpb.param.value_min +
-        lpb * (prm_lpb.param.value_max - prm_lpb.param.value_min))
-      
-      local deno = lcm(lpb, pos_beat_deno)
-      if deno > 0x10000000000000 / #target.lines then
-        renoise.app():show_error("Least common multiple of LPBs is too big.")
-        return false
-      end
+    pos_beat_nume, pos_beat_deno, lpb_pt_idx = update_pos_beat(
+      pos_beat_nume, pos_beat_deno, prm_lpb, lpb_pt_idx, time, #target.lines)
 
-      pos_beat_nume = pos_beat_nume * (deno / pos_beat_deno)
-      pos_beat_deno = deno
-    
-      pos_beat_nume = pos_beat_nume + pos_beat_deno / lpb
-      
-    else
-      pos_beat_nume = pos_beat_nume + 1
+    if pos_beat_nume == nil then
+      return false
     end
 
     time = time + 1
@@ -319,6 +329,56 @@ local function analyze_track(track_opt, params, param_tags, s_pos, e_pos)
 end
 
 --------------------------------------------------------------------------------
+-- analyze_bpm
+-- If error, return false.
+
+local function analyze_bpm(s_pos, e_pos, prm_bpm, prm_lpb)
+  if prm_bpm == nil then
+    return nil
+  end
+
+  local pat_seq = renoise.song().sequencer.pattern_sequence
+
+  local lines, pos_list, start_time =
+    flatten_lines(pat_seq, prm_bpm.trk_idx, s_pos, e_pos)
+
+  local pos_beat_nume = 0
+  local pos_beat_deno = renoise.song().transport.lpb
+  local lpb_pt_idx = 1
+
+  local t = table.create()
+  local bpm_pt_idx = 1
+
+  for time = start_time, start_time + #lines - 1 do
+
+    for i = bpm_pt_idx, #prm_bpm.envelope do
+      local pt = prm_bpm.envelope[i]
+
+      if pt.time > time then
+        break
+      elseif pt.time == time then
+        t:insert {
+          pos = quantize(pos_beat_nume / pos_beat_deno * BMS_RESOLUTION / 4),
+          value = quantize(prm_bpm.param.value_min +
+            pt.value * (prm_bpm.param.value_max - prm_bpm.param.value_min))
+        }
+      end
+
+      bpm_pt_idx = i
+    end
+    
+    pos_beat_nume, pos_beat_deno, lpb_pt_idx = update_pos_beat(
+      pos_beat_nume, pos_beat_deno, prm_lpb, lpb_pt_idx, time, #lines)
+
+    if pos_beat_nume == nil then
+      return false
+    end
+  end
+
+  return t
+end
+
+--------------------------------------------------------------------------------
 -- analyze
 
 function analyze(en_track_opts, s_pos, e_pos)
@@ -351,5 +411,10 @@ function analyze(en_track_opts, s_pos, e_pos)
     return nil
   end
 
-  return bms_data
+  local bpm_data = analyze_bpm(s_pos, e_pos, param_tags.BPM, param_tags.LPB)
+  if bpm_data == false then
+    return nil
+  end
+
+  return bms_data, bpm_data
 end

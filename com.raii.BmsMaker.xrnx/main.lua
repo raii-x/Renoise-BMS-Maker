@@ -131,19 +131,19 @@ function make_bms(export_only, range_opts, file_opts, render_opts_gui,
     end
   end
 
-  local bms_data = analyze(en_track_opts, start_pos, end_pos)
+  local bms_data, bpm_data = analyze(en_track_opts, start_pos, end_pos)
   if bms_data == nil then
     return nil
   end
 
   if export_only then
-    export_to_bms(file_opts, en_track_opts, bms_data)
+    export_to_bms(file_opts, en_track_opts, bms_data, bpm_data)
   else
     local function get_render_func(i)
       return function()
         if i > #en_track_opts then
 
-          export_to_bms(file_opts, en_track_opts, bms_data)
+          export_to_bms(file_opts, en_track_opts, bms_data, bpm_data)
         else
           start_rendering(en_track_opts[i], file_opts, render_opts,
             bms_data[i], get_render_func(i + 1))

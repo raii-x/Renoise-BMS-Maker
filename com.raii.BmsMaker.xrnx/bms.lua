@@ -1,18 +1,21 @@
 bms_start_number = 1
 
 
-local function output(en_track_opts, bms_data, start_number, filepath)
-  local bar_num = 0
-  local lane_num = 0
-
-  for i_trk, data in ipairs(bms_data) do
-    for _, v in ipairs(data.order) do
-      bar_num = math.max(bar_num, 1 + math.floor(v.pos / BMS_RESOLUTION))
-      lane_num = math.max(lane_num,
-        en_track_opts[i_trk].bgm_lane + v.column - 1)
-    end
+local function write_sequence(strs, bar_idx, channel, lane)
+  local t = table.create()
+  for i = 1, BMS_RESOLUTION do
+    t[i] = "00"
   end
 
+  for _, note in ipairs(lane) do
+    t[1 + note.pos] = tostring36(note.number)
+  end
+
+  -- Add sequence text
+  strs:insert(("#%03d%02d:%s"):format(bar_idx - 1, channel, t:concat()))
+end
+
+local function output(en_track_opts, bms_data, bpm_data, start_number, filepath)
   local strs = table.create {
     "#TITLE ",
     ("#BPM %d"):format(renoise.song().transport.bpm),
@@ -20,63 +23,116 @@ local function output(en_track_opts, bms_data, start_number, filepath)
     "",
   }
 
-  -- bars[bar][lane]
-  local bars = table.create()
-  for i = 1, bar_num do
-    local t = table.create()
-    for j = 1, lane_num do
-      t:insert(table.create())
-    end
-    bars:insert(t)
-  end
+  -- Notes
 
-  local note_number = start_number
-
-  for i_trk, data in ipairs(bms_data) do
-    for _, v in ipairs(data.order) do
-      local bar = 1 + math.floor(v.pos / BMS_RESOLUTION)
-      local lane = en_track_opts[i_trk].bgm_lane + v.column - 1
-      bars[bar][lane]:insert {
-        pos = v.pos % BMS_RESOLUTION,
-        number = note_number + v.note.number,
-      }
-    end
-
-    for _, v in ipairs(data.notes) do
-      -- Add wav header text
-      strs:insert(("#WAV%s %s_%03d.wav"):format(
-        tostring36(note_number + v.number), en_track_opts[i_trk].filename,
-        v.number))
-    end
-
-    note_number = note_number + #data.notes
-  end
+  do
+    local bar_num = 0
+    local lane_num = 0
   
-  strs:insert("")
-  strs:insert("")
-
-  for i_bar, bar in ipairs(bars) do
-    for i_lane, lane in ipairs(bar) do
-      
+    for i_trk, data in ipairs(bms_data) do
+      for _, v in ipairs(data.order) do
+        bar_num = math.max(bar_num, 1 + math.floor(v.pos / BMS_RESOLUTION))
+        lane_num = math.max(lane_num,
+          en_track_opts[i_trk].bgm_lane + v.column - 1)
+      end
+    end
+  
+    -- bars[bar][lane]
+    local bars = table.create()
+    for i = 1, bar_num do
       local t = table.create()
-      for i = 1, BMS_RESOLUTION do
-        t:insert("00")
+      for j = 1, lane_num do
+        t:insert(table.create())
+      end
+      bars:insert(t)
+    end
+
+    local note_number = start_number
+
+    for i_trk, data in ipairs(bms_data) do
+      for _, v in ipairs(data.order) do
+        local bar = 1 + math.floor(v.pos / BMS_RESOLUTION)
+        local lane = en_track_opts[i_trk].bgm_lane + v.column - 1
+        bars[bar][lane]:insert {
+          pos = v.pos % BMS_RESOLUTION,
+          number = note_number + v.note.number,
+        }
       end
 
-      for _, note in ipairs(lane) do
-        t[1 + note.pos] = tostring36(note.number)
+      for _, v in ipairs(data.notes) do
+        -- Add wav header text
+        strs:insert(("#WAV%s %s_%03d.wav"):format(
+          tostring36(note_number + v.number), en_track_opts[i_trk].filename,
+          v.number))
       end
 
-      -- Add sequence text
-      strs:insert(("#%03d01:%s"):format(i_bar - 1, t:concat()))
+      note_number = note_number + #data.notes
     end
 
     strs:insert("")
+    strs:insert("")
+
+    for i_bar, bar in ipairs(bars) do
+      for i_lane, lane in ipairs(bar) do
+        write_sequence(strs, i_bar, 1, lane)
+      end
+      strs:insert("")
+    end
   end
 
-  strs:insert("")
-  strs:insert("")
+  -- BPM
+
+  if bpm_data ~= nil then
+    strs:insert("")
+    strs:insert("")
   
+    local bar_num = 0
+    for _, v in ipairs(bpm_data) do
+      bar_num = math.max(bar_num, 1 + math.floor(v.pos / BMS_RESOLUTION))
+    end
+  
+    -- bars[bar]
+    local bars = table.create()
+    for i = 1, bar_num do
+      bars:insert(table.create())
+    end
+
+    -- bpm_def[BPM] = Definition number
+    local bpm_def = {}
+    local bpm_def_len = 0
+
+    for _, v in ipairs(bpm_data) do
+      if bpm_def[v.value] == nil then
+        bpm_def_len = bpm_def_len + 1
+        bpm_def[v.value] = bpm_def_len
+      end
+
+      local bar = 1 + math.floor(v.pos / BMS_RESOLUTION)
+      bars[bar]:insert {
+        pos = v.pos % BMS_RESOLUTION,
+        number = bpm_def[v.value]
+      }
+    end
+    
+    if bpm_def_len > 1295 then
+      renoise.app():show_error("The BPM definition number exceeds ZZ.")
+      return
+    end
+
+    for k, v in pairs(bpm_def) do
+      -- Add bpm header text
+      strs:insert(("#BPM%s %f"):format(tostring36(v), k))
+    end
+
+    strs:insert("")
+    strs:insert("")
+
+    for i_bar, bar in ipairs(bars) do
+      write_sequence(strs, i_bar, 8, bar)
+    end
+  end
+  
+  -- Write to file
   local file = io.open(filepath, "w")
   file:write(strs:concat("\n"))
   file:close()
@@ -85,7 +141,7 @@ end
 --------------------------------------------------------------------------------
 -- export_to_bms
 
-function export_to_bms(file_opts, en_track_opts, bms_data)
+function export_to_bms(file_opts, en_track_opts, bms_data, bpm_data)
 
   local vb = renoise.ViewBuilder()
   
@@ -180,7 +236,7 @@ function export_to_bms(file_opts, en_track_opts, bms_data)
           end
         end
 
-        output(en_track_opts, bms_data, vb.views.start_number.value, filepath)
+        output(en_track_opts, bms_data, bpm_data, vb.views.start_number.value, filepath)
         renoise.app():show_status(("Exported to '%s'."):format(filename))
       end
     },
