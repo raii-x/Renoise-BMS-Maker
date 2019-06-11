@@ -122,7 +122,6 @@ end
 
 local function analyze_column(target, state, track_opt)
 
-  local lpb = renoise.song().transport.lpb
   local ecol_num = target.trk.visible_effect_columns
 
   -- lines, automation, number
@@ -130,13 +129,17 @@ local function analyze_column(target, state, track_opt)
   local note = nil
   local note_line_idx = 1
   local note_time
-  local pos_bms = 0
   local time = target.start_time
   local start_pt_idx = table.create()
 
   for i = 1, #target.auto_prms do
     start_pt_idx[i] = 1
   end
+
+  local prm_lpb = target.param_tags.LPB
+  local pos_beat_nume = 0
+  local pos_beat_deno = renoise.song().transport.lpb
+  local lpb_pt_idx = 1
   
   local function note_end()
     local nlines = track_opt.release_lines
@@ -181,12 +184,9 @@ local function analyze_column(target, state, track_opt)
     state.order[#state.order].note = note
     note = nil
   end
-  
+
   -- Iterate lines
   for line_idx, line in ipairs(target.lines) do
-  
-    --local ncol = line:note_column(col_idx)
-    
     if note and has_end(line, target.start_ncol_idx, target.end_ncol_idx) then
       note_end()
     end
@@ -199,8 +199,9 @@ local function analyze_column(target, state, track_opt)
       note_line_idx = line_idx
       note_time = time
       state.order:insert {
-        pos = pos_bms,
+        pos = quantize(pos_beat_nume / pos_beat_deno * BMS_RESOLUTION / 4),
         column = target.start_ncol_idx,
+        note = nil,
       }
     end
     
@@ -226,17 +227,35 @@ local function analyze_column(target, state, track_opt)
       end
     end
     
-    pos_bms = pos_bms + BMS_RESOLUTION / 4 / lpb
+    -- Update beat position
+    if prm_lpb ~= nil then
+      local lpb
+      lpb, lpb_pt_idx = get_value_in_points(
+        prm_lpb.linear, prm_lpb.envelope, lpb_pt_idx, time)
+      lpb = quantize(prm_lpb.param.value_min +
+        lpb * (prm_lpb.param.value_max - prm_lpb.param.value_min))
+      
+      local deno = lcm(lpb, pos_beat_deno)
+      if deno > 0x10000000000000 / #target.lines then
+        renoise.app():show_error("Least common multiple of LPBs is too big.")
+        return false
+      end
+
+      pos_beat_nume = pos_beat_nume * (deno / pos_beat_deno)
+      pos_beat_deno = deno
+      
+      pos_beat_nume = pos_beat_nume + pos_beat_deno / lpb
+    end
+
     time = time + 1
-    
   end
   
   if note then
     note_end()
   end
-  
-end
 
+  return true
+end
 
 --------------------------------------------------------------------------------
 -- analyze_track
@@ -275,12 +294,16 @@ local function analyze_track(track_opt, params, param_tags, s_pos, e_pos)
   if track_opt.chord_mode then
     target.start_ncol_idx = 1
     target.end_ncol_idx = ncol_num
-    analyze_column(target, state, track_opt)
+    if not analyze_column(target, state, track_opt) then
+      return nil
+    end
   else
     for i = 1, ncol_num do
       target.start_ncol_idx = i
       target.end_ncol_idx = i
-      analyze_column(target, state, track_opt)
+      if not analyze_column(target, state, track_opt) then
+        return nil
+      end
     end
   end
   
@@ -307,6 +330,9 @@ function analyze(en_track_opts, s_pos, e_pos)
 
   for i, track_opt in ipairs(en_track_opts) do
     local data, exc = analyze_track(track_opt, params, param_tags, s_pos, e_pos)
+    if data == nil then
+      return nil
+    end
     bms_data:insert(data)
 
     for _, v in ipairs(exc) do

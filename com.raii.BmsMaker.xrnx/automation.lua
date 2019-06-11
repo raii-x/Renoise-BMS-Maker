@@ -475,6 +475,21 @@ function slice_points(linear, points, start_pt_idx, s_time, e_time)
   return slice, start_pt_idx
 end
 
+
+function get_value_in_points(linear, points, start_pt_idx, time)
+  start_pt_idx = get_first_slice_point(points, start_pt_idx, time)
+  local v
+
+  if not linear or start_pt_idx == #points then
+    v = points[start_pt_idx].value
+  else
+    v = interpolate_points(
+      points[start_pt_idx], points[start_pt_idx + 1], time)
+  end
+
+  return v, start_pt_idx
+end
+
 --------------------------------------------------------------------------------
 -- Tests
 

@@ -111,6 +111,19 @@ function table_eq_deep(a, b, value_map)
 end
 
 -- Quantize by q.
+-- q = 1 when q is nil.
 function quantize(x, q)
+  if q == nil then q = 1 end
   return math.floor(x / q + 0.5) * q
+end
+
+function gcd(a, b)
+  while a ~= 0 do
+      a, b = b%a, a
+  end
+  return b
+end
+
+function lcm(a, b)
+  return a / gcd(a, b) * b
 end
