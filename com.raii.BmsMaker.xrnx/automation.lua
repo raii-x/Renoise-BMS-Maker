@@ -1,124 +1,5 @@
-local function parent_table_part(tbl, par_idx, members)
-  local idx = par_idx - 1
-  
-  while idx >= par_idx - members do
-    local trk = renoise.song():track(idx)
-    
-    tbl[idx] = par_idx
-    
-    if trk.type == renoise.Track.TRACK_TYPE_GROUP then
-      idx = parent_table_part(tbl, idx, #trk.members)
-    else
-      idx = idx - 1
-    end
-  end
-  
-  return idx
-end
-
--- Make a table of track indices of group parents
--- The parent of top level tracks is the master track.
--- Index of the master track and send tracks is 0.
-local function get_parent_table()
-  local tbl = table.create()
-  for i = 1, #renoise.song().tracks do
-    tbl:insert(0)
-  end
-  
-  local idx = #renoise.song().tracks
-  
-  for idx, trk in ripairs(renoise.song().tracks) do
-    if trk.type == renoise.Track.TRACK_TYPE_MASTER then
-      parent_table_part(tbl, idx, idx - 1)
-      break
-    end
-  end
-  
-  return tbl
-end
-
-
-function flatten_all_params()
-  local params = table.create()
-  local param_tags = {}
-
-  local pat_seq = renoise.song().sequencer.pattern_sequence
-
-  for trk_idx, trk in ipairs(renoise.song().tracks) do
-    local t = table.create()
-
-    for dev_idx, dev in ipairs(trk.devices) do
-      for prm_idx, prm in ipairs(dev.parameters) do
-        if prm.is_automated then
-
-          local linear = true
-          local tag = nil
-
-          if prm.value_quantum ~= 0 then
-            linear = false
-          end
-          
-          if trk.type == renoise.Track.TRACK_TYPE_MASTER and dev_idx == 1 then
-            if prm_idx == 6 then
-              linear = false
-              tag = "BPM"
-            elseif prm_idx == 7 then
-              tag = "LPB"
-            elseif prm_idx == 8 then
-              tag = "TPL"
-            end
-          end
-
-          local env = flatten_points(pat_seq, trk_idx, prm, linear)
-  
-          if env == false then
-            -- Error
-            return nil
-          elseif env ~= nil then
-            -- Not command controled parameter
-            local p = {
-              trk_idx = trk_idx,
-              param = prm,
-              linear = linear,
-              tag = tag,
-              envelope = env,
-            }
-            t:insert(p)
-
-            if tag ~= nil then
-              param_tags[tag] = p
-            end
-          end
-      
-        end
-      end
-    end
-
-    params:insert(t)
-  end
-
-  return params, param_tags
-end
-
-
-function filter_track_params(params, search_trk_idx)
-  local t = table.create()
-  local parent_table = get_parent_table()
-
-  for trk_idx, prms in ipairs(params) do
-    if trk_idx == search_trk_idx then
-
-      for i, p in ipairs(prms) do
-        t:insert(p)
-      end
-      
-      search_trk_idx = parent_table[trk_idx]
-    end
-  end
-  
-  return t
-end
-
+--------------------------------------------------------------------------------
+-- Flatten functions
 
 -- If there's no point, return nil.
 local function get_first_value(pat_seq, trk_idx, prm)
@@ -232,7 +113,7 @@ end
 
 -- If there's no automation, return nil.
 -- If error, return false.
-function flatten_points(pat_seq, trk_idx, prm, linear)
+local function flatten_points(pat_seq, trk_idx, prm, linear)
   if not linear then
     return flatten_points_quantum(pat_seq, trk_idx, prm)
   end
@@ -354,6 +235,134 @@ function flatten_points(pat_seq, trk_idx, prm, linear)
 end
 
 
+function flatten_all_params()
+  local params = table.create()
+  local param_tags = {}
+
+  local pat_seq = renoise.song().sequencer.pattern_sequence
+
+  for trk_idx, trk in ipairs(renoise.song().tracks) do
+    local t = table.create()
+
+    for dev_idx, dev in ipairs(trk.devices) do
+      for prm_idx, prm in ipairs(dev.parameters) do
+        if prm.is_automated then
+
+          local linear = true
+          local tag = nil
+
+          if prm.value_quantum ~= 0 then
+            linear = false
+          end
+          
+          if trk.type == renoise.Track.TRACK_TYPE_MASTER and dev_idx == 1 then
+            if prm_idx == 6 then
+              linear = false
+              tag = "BPM"
+            elseif prm_idx == 7 then
+              tag = "LPB"
+            elseif prm_idx == 8 then
+              tag = "TPL"
+            end
+          end
+
+          local env = flatten_points(pat_seq, trk_idx, prm, linear)
+  
+          if env == false then
+            -- Error
+            return nil
+          elseif env ~= nil then
+            -- Not command controled parameter
+            local p = {
+              trk_idx = trk_idx,
+              param = prm,
+              linear = linear,
+              tag = tag,
+              envelope = env,
+            }
+            t:insert(p)
+
+            if tag ~= nil then
+              param_tags[tag] = p
+            end
+          end
+      
+        end
+      end
+    end
+
+    params:insert(t)
+  end
+
+  return params, param_tags
+end
+
+
+--------------------------------------------------------------------------------
+-- Parent table functions
+
+local function parent_table_part(tbl, par_idx, members)
+  local idx = par_idx - 1
+  
+  while idx >= par_idx - members do
+    local trk = renoise.song():track(idx)
+    
+    tbl[idx] = par_idx
+    
+    if trk.type == renoise.Track.TRACK_TYPE_GROUP then
+      idx = parent_table_part(tbl, idx, #trk.members)
+    else
+      idx = idx - 1
+    end
+  end
+  
+  return idx
+end
+
+-- Make a table of track indices of group parents
+-- The parent of top level tracks is the master track.
+-- Index of the master track and send tracks is 0.
+local function get_parent_table()
+  local tbl = table.create()
+  for i = 1, #renoise.song().tracks do
+    tbl:insert(0)
+  end
+  
+  local idx = #renoise.song().tracks
+  
+  for idx, trk in ripairs(renoise.song().tracks) do
+    if trk.type == renoise.Track.TRACK_TYPE_MASTER then
+      parent_table_part(tbl, idx, idx - 1)
+      break
+    end
+  end
+  
+  return tbl
+end
+
+
+function filter_track_params(params, search_trk_idx)
+  local t = table.create()
+  local parent_table = get_parent_table()
+
+  for trk_idx, prms in ipairs(params) do
+    if trk_idx == search_trk_idx then
+
+      for i, p in ipairs(prms) do
+        t:insert(p)
+      end
+      
+      search_trk_idx = parent_table[trk_idx]
+    end
+  end
+  
+  return t
+end
+
+
+--------------------------------------------------------------------------------
+-- Slice functions
+
 local function get_first_slice_point(points, start_pt_idx, s_time)
   -- Search the necessary point to get the start value
   -- in the time range given by s_time and e_time (Update start_pt_idx)
@@ -467,7 +476,7 @@ function slice_points(linear, points, start_pt_idx, s_time, e_time)
 end
 
 --------------------------------------------------------------------------------
--- Test
+-- Tests
 
 if TEST then
   do
