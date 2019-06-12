@@ -523,21 +523,22 @@ if TEST then
     end
 
     -- Group & master track automation test
+    local params = flatten_all_params()
 
     assert(table_eq_deep(
-      remove_param(search_automated_params(1)),
+      remove_param(filter_track_params(params, 1)),
       { 1, 7 }
     ))
     assert(table_eq_deep(
-      remove_param(search_automated_params(2)),
+      remove_param(filter_track_params(params, 2)),
       { 2, 4, 6, 7 }
     ))
     assert(table_eq_deep(
-      remove_param(search_automated_params(3)),
+      remove_param(filter_track_params(params, 3)),
       { 3, 4, 6, 7 }
     ))
     assert(table_eq_deep(
-      remove_param(search_automated_params(5)),
+      remove_param(filter_track_params(params, 5)),
       { 5, 6, 7 }
     ))
   end
