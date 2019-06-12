@@ -121,7 +121,11 @@ function make_bms(export_only, range_opts, file_opts, render_opts_gui,
   -- Add '\' to the end of directory
   local dir_lastchar = file_opts.directory:sub(-1)
   if dir_lastchar ~= [[\]] and dir_lastchar ~= [[/]] then
-    file_opts.directory = file_opts.directory .. [[\]]
+    if os.platform() == "WINDOWS" then
+      file_opts.directory = file_opts.directory .. [[\]]
+    else
+      file_opts.directory = file_opts.directory .. [[/]]
+    end
   end
   
   local en_track_opts = table.create()
