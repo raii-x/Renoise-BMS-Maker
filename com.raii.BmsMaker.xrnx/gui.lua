@@ -290,7 +290,7 @@ local function group_range()
 end
 
 local function group_file_options()
-  return gui_group("File Options",
+  return gui_group("Destination",
 
     vb:column {
       vb:row {
