@@ -133,7 +133,12 @@ local function output(en_track_opts, bms_data, bpm_data, start_number, filepath)
   end
   
   -- Write to file
-  local file = io.open(filepath, "w")
+  local file, msg = io.open(filepath, "w")
+  if file == nil then
+    renoise.app():show_error(msg)
+    return
+  end
+
   file:write(strs:concat("\n"))
   file:close()
 end
