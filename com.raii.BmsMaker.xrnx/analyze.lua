@@ -190,7 +190,8 @@ class "Analyzer"
           t:insert {
             pos = quantize(pos_beat_nume / pos_beat_deno * BMS_RESOLUTION / 4),
             value = quantize(prm_bpm.param.value_min +
-              pt.value * (prm_bpm.param.value_max - prm_bpm.param.value_min))
+              pt.value * (prm_bpm.param.value_max - prm_bpm.param.value_min),
+              1 / 10000)
           }
         end
 

@@ -18,7 +18,7 @@ end
 local function output(en_track_opts, bms_data, bpm_data, start_number, filepath)
   local strs = table.create {
     "#TITLE ",
-    ("#BPM %f"):format(renoise.song().transport.bpm),
+    ("#BPM %.4f"):format(renoise.song().transport.bpm),
     "",
     "",
   }
@@ -121,7 +121,7 @@ local function output(en_track_opts, bms_data, bpm_data, start_number, filepath)
 
     for k, v in pairs(bpm_def) do
       -- Add bpm header text
-      strs:insert(("#BPM%s %f"):format(tostring36(v), k))
+      strs:insert(("#BPM%s %.4f"):format(tostring36(v), k))
     end
 
     strs:insert("")
