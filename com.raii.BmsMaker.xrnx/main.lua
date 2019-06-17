@@ -135,7 +135,8 @@ function make_bms(export_only, range_opts, file_opts, render_opts_gui,
     end
   end
 
-  local bms_data, bpm_data = analyze(en_track_opts, start_pos, end_pos)
+  local analyzer = Analyzer(en_track_opts, start_pos, end_pos)
+  local bms_data, bpm_data = analyzer:analyze()
   if bms_data == nil then
     return nil
   end
