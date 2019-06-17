@@ -232,27 +232,7 @@ class "TrackAnalyzer"
   -- analyze
 
   function TrackAnalyzer:analyze()
-    -- local pat_seq = renoise.song().sequencer.pattern_sequence
     local ncol_num = self.track.visible_note_columns
-    
-    -- local target = {
-    --   trk = trk,
-    --   lines = lines,
-    --   pos_list = pos_list,
-    --   start_time = start_time,
-    --   auto_prms = auto_prms,
-    --   param_tags = param_tags,
-    --   start_ncol_idx = nil,
-    --   end_ncol_idx = nil,
-    -- }
-
-    -- local state = {
-    --   notes = table.create(),
-    --   order = table.create(),
-    --   notes_hash = {},
-    --   note_number = 0,
-    --   err_exceed = table.create(),
-    -- }
     
     if self.track_opt.chord_mode then
       if not self:_analyze_column(1, ncol_num) then
