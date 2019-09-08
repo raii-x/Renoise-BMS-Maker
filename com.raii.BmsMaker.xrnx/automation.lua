@@ -39,7 +39,8 @@ local function flatten_points_quantum(pat_seq, trk_idx, prm)
     -- Add first point at the head of song
     add_point_quantum(fpts, {
       time = 1,
-      value = val
+      value = val,
+      scaling = 0
     })
   end
 
@@ -77,7 +78,8 @@ local function flatten_points_quantum(pat_seq, trk_idx, prm)
         if not auto:has_point_at(1) then
           add_point_quantum(fpts, {
             time = seq_time + 1,
-            value = pts[1].value
+            value = pts[1].value,
+            scaling = 0
           })
         end        
       end
@@ -140,13 +142,19 @@ local function flatten_points(pat_seq, trk_idx, prm, lines_mode)
         if not auto:has_point_at(1) then
           add_point(fpts, {
             time = seq_time + 1,
-            value = pts[1].value
+            value = pts[1].value,
+            scaling = 0
           })
         end
         
         -- Flatten points
         for pt_idx, pt in ipairs(auto.points) do
           pt.time = pt.time + seq_time
+          -- Set 0 to scaling of last point
+          if pt_idx == #auto.points then
+            pt.scaling = 0
+          end
+
           add_point(fpts, pt)
         end
         
@@ -154,7 +162,8 @@ local function flatten_points(pat_seq, trk_idx, prm, lines_mode)
         if not auto:has_point_at(end_time) then
           add_point(fpts, {
             time = seq_time + end_time,
-            value = pts[#pts].value
+            value = pts[#pts].value,
+            scaling = 0
           })
         end
 
@@ -165,7 +174,8 @@ local function flatten_points(pat_seq, trk_idx, prm, lines_mode)
           local val = get_first_value(pat_seq, trk_idx, prm)
           add_point(fpts, {
             time = 1,
-            value = pts[1].value
+            value = pts[1].value,
+            scaling = 0
           })
         end
       
@@ -175,11 +185,13 @@ local function flatten_points(pat_seq, trk_idx, prm, lines_mode)
           if pt.time > 1 and not auto:has_point_at(pt.time - prm.time_quantum) and #fpts > 0 then
             add_point(fpts, {
               time = seq_time + pt.time - prm.time_quantum,
-              value = fpts[#fpts].value
+              value = fpts[#fpts].value,
+              scaling = 0
             })
           end
 
           pt.time = pt.time + seq_time
+          pt.scaling = 0
           add_point(fpts, pt)
         end
         
@@ -187,7 +199,8 @@ local function flatten_points(pat_seq, trk_idx, prm, lines_mode)
         if not auto:has_point_at(end_time) then
           add_point(fpts, {
             time = seq_time + end_time,
-            value = pts[#pts].value
+            value = pts[#pts].value,
+            scaling = 0
           })
         end
 
@@ -210,14 +223,16 @@ local function flatten_points(pat_seq, trk_idx, prm, lines_mode)
         -- Add point at the head
         add_point(fpts, {
           time = 1,
-          value = val
+          value = val,
+          scaling = 0
         })
       end
       
       -- Add point at the end
       add_point(fpts, {
         time = seq_time + end_time,
-        value = fpts[#fpts].value
+        value = fpts[#fpts].value,
+        scaling = 0
       })
     end
     
@@ -393,7 +408,8 @@ local function slice_points_quantum(points, start_pt_idx, s_time, e_time)
   -- Slice
   slice:insert {
     time = 1,
-    value = points[start_pt_idx].value
+    value = points[start_pt_idx].value,
+    scaling = 0
   }
 
   for pt_idx = start_pt_idx+1, #points do
@@ -406,7 +422,8 @@ local function slice_points_quantum(points, start_pt_idx, s_time, e_time)
     -- Get a value in the time range and make a point
     slice:insert {
       time = 1 + (pt.time - s_time),
-      value = pt.value
+      value = pt.value,
+      scaling = 0
     }
   end
 
@@ -415,8 +432,22 @@ end
 
 
 local function interpolate_points(pt1, pt2, time)
-  return pt1.value + (time - pt1.time) *
-    ((pt2.value - pt1.value) / (pt2.time - pt1.time))
+  local v1 = pt1.value
+  local v2 = pt2.value
+  local t = (time - pt1.time) / (pt2.time - pt1.time)
+  local p = 1 + 16 * math.abs(pt1.scaling) ^ (math.exp(1) / 2)
+
+  if pt1.scaling >= 0 then
+    return v1 + (v2 - v1) * (t ^ p)
+  else
+    return v1 + (v2 - v1) * (1 - (1 - t) ^ p)
+  end
+end
+
+
+local function interpolate_scaling(pt1, pt2, time, time2)
+  local t = (time - pt1.time) / (pt2.time - pt1.time)
+  return pt1.scaling * (1 - t)
 end
 
 
@@ -437,7 +468,8 @@ function slice_points(lines_mode, points, start_pt_idx, s_time, e_time)
   if start_pt_idx == #points then
     slice:insert {
       time = 1,
-      value = points[start_pt_idx].value
+      value = points[start_pt_idx].value,
+      scaling = 0
     }
     
   else
@@ -445,6 +477,8 @@ function slice_points(lines_mode, points, start_pt_idx, s_time, e_time)
     slice:insert {
       time = 1,
       value = interpolate_points(
+        points[start_pt_idx], points[start_pt_idx+1], s_time),
+      scaling = interpolate_scaling(
         points[start_pt_idx], points[start_pt_idx+1], s_time)
     }
     
@@ -455,9 +489,12 @@ function slice_points(lines_mode, points, start_pt_idx, s_time, e_time)
       if pt.time >= e_time then
         local val = interpolate_points(points[pt_idx-1], pt, e_time)
         if val ~= slice[#slice].value then
+          slice[#slice].scaling =
+            slice[#slice].scaling - interpolate_scaling(points[pt_idx-1], pt, e_time)
           slice:insert {
             time = 1 + (e_time - s_time),
-            value = val
+            value = val,
+            scaling = 0
           }
         end
         break
@@ -466,7 +503,8 @@ function slice_points(lines_mode, points, start_pt_idx, s_time, e_time)
       else
         slice:insert {
           time = 1 + (pt.time - s_time),
-          value = pt.value
+          value = pt.value,
+          scaling = pt.scaling
         }
       end
     end
@@ -578,44 +616,44 @@ if TEST then
       -- Flatten test
       local q = prm.time_quantum
       assert(table_eq_deep(env, {
-        { time = 1, value = 0 },
-        { time = 3, value = 0 },
-        { time = 7, value = 1 },
-        { time = 11, value = 0.5 },
-        { time = 129 - q, value = 0.5 },
-        { time = 129, value = 1 },
-        { time = 193 - q, value = 1 },
-        { time = 193, value = 0 },
-        { time = 194.5 - q, value = 0 },
-        { time = 194.5, value = 0.5 },
-        { time = 261 - q, value = 0.5 },
-        { time = 261, value = 1 },
+        { time = 1, value = 0, scaling = 0 },
+        { time = 3, value = 0, scaling = 0 },
+        { time = 7, value = 1, scaling = 0 },
+        { time = 11, value = 0.5, scaling = 0 },
+        { time = 129 - q, value = 0.5, scaling = 0 },
+        { time = 129, value = 1, scaling = 0 },
+        { time = 193 - q, value = 1, scaling = 0 },
+        { time = 193, value = 0, scaling = 0 },
+        { time = 194.5 - q, value = 0, scaling = 0 },
+        { time = 194.5, value = 0.5, scaling = 0 },
+        { time = 261 - q, value = 0.5, scaling = 0 },
+        { time = 261, value = 1, scaling = 0 },
       }))
 
       -- Slice tests
 
       assert(table_eq_deep(
         slice_points(true, env, 1, 1, 2), {
-          { time = 1, value = 0 },
+          { time = 1, value = 0, scaling = 0 },
         }))
 
       assert(table_eq_deep(
         slice_points(true, env, 1, 2, 4.5), {
-          { time = 1, value = 0 },
-          { time = 2, value = 0 },
-          { time = 3.5, value = 0.375 },
+          { time = 1, value = 0, scaling = 0 },
+          { time = 2, value = 0, scaling = 0 },
+          { time = 3.5, value = 0.375, scaling = 0 },
         }))
 
       assert(table_eq_deep(
         slice_points(true, env, 1, 6, 12), {
-          { time = 1, value = 0.75 },
-          { time = 2, value = 1 },
-          { time = 6, value = 0.5 },
+          { time = 1, value = 0.75, scaling = 0 },
+          { time = 2, value = 1, scaling = 0 },
+          { time = 6, value = 0.5, scaling = 0 },
         }))
       
       assert(table_eq_deep(
         slice_points(true, env, 1, 12, 13), {
-          { time = 1, value = 0.5 },
+          { time = 1, value = 0.5, scaling = 0 },
         }))
     end
 
@@ -630,7 +668,7 @@ if TEST then
       local env = flatten_points(pat_seq, 1, prm, true)
       -- Flatten test
       assert(table_eq_deep(env, {
-        { time = 1, value = 0 },
+        { time = 1, value = 0, scaling = 0 },
       }))
     end
   end
@@ -664,29 +702,29 @@ if TEST then
 
       -- Flatten test
       assert(table_eq_deep(env, {
-        { time = 1, value = 0 },
-        { time = 7, value = 1 },
-        { time = 11, value = 0.5 },
-        { time = 137, value = 1 },
+        { time = 1, value = 0, scaling = 0 },
+        { time = 7, value = 1, scaling = 0 },
+        { time = 11, value = 0.5, scaling = 0 },
+        { time = 137, value = 1, scaling = 0 },
       }))
     
       -- Slice tests
 
       assert(table_eq_deep(
         slice_points(false, env, 1, 1, 2), {
-          { time = 1, value = 0 },
+          { time = 1, value = 0, scaling = 0 },
         }))
   
       assert(table_eq_deep(
         slice_points(false, env, 1, 6, 12), {
-          { time = 1, value = 0 },
-          { time = 2, value = 1 },
-          { time = 6, value = 0.5 },
+          { time = 1, value = 0, scaling = 0 },
+          { time = 2, value = 1, scaling = 0 },
+          { time = 6, value = 0.5, scaling = 0 },
         }))
 
       assert(table_eq_deep(
         slice_points(false, env, 1, 12, 13), {
-          { time = 1, value = 0.5 },
+          { time = 1, value = 0.5, scaling = 0 },
         }))
   
     end
@@ -710,12 +748,78 @@ if TEST then
 
       -- Flatten test
       assert(table_eq_deep(env, {
-        { time = 1, value = 0 },
-        { time = 7, value = 1 },
-        { time = 11, value = 0.5 },
-        { time = 129, value = 1 }, -- Not at the point but at the head of the pattern
+        { time = 1, value = 0, scaling = 0 },
+        { time = 7, value = 1, scaling = 0 },
+        { time = 11, value = 0.5, scaling = 0 },
+        { time = 129, value = 1, scaling = 0 }, -- Not at the point but at the head of the pattern
       }))
     end
+  end
+
+  -- Test scaling of lines mode
+  do
+    setup_test(5)
+
+    local pat_seq = renoise.song().sequencer.pattern_sequence
+
+    local pattrk = {}
+    for i = 1, 5 do
+      pattrk[i] = renoise.song():pattern(i):track(1)
+    end
+
+    local prm = renoise.song():track(1):device(1):parameter(1)
+
+    local auto = {}
+    auto[1] = pattrk[1]:create_automation(prm)
+    auto[3] = pattrk[3]:create_automation(prm)
+
+    auto[3].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
+
+    auto[1]:add_point_at(1, 1, -0.25)
+    auto[1]:add_point_at(3, 0, 1)
+    auto[1]:add_point_at(7, 1, 0.25)
+    auto[1]:add_point_at(11, 0.5, -0.5)
+    auto[3]:add_point_at(9, 1, 0.125)
+    
+    local env = flatten_points(pat_seq, 1, prm, true)
+
+    -- Flatten test
+    local q = prm.time_quantum
+    assert(table_eq_deep(env, {
+      { time = 1, value = 1, scaling = -0.25 },
+      { time = 3, value = 0, scaling = 1 },
+      { time = 7, value = 1, scaling = 0.25 },
+      { time = 11, value = 0.5, scaling = 0 },
+      { time = 137 - q, value = 0.5, scaling = 0 },
+      { time = 137, value = 1, scaling = 0 },
+    }))
+
+    -- Slice tests
+
+    value_map = { number = function(x) return quantize(x, 1 / 0x10000) end }
+
+    assert(table_eq_deep(
+      slice_points(true, env, 1, 2, 2.5), {
+        { time = 1, value = 0.092700213193893, scaling = -0.0625 },
+        { time = 1.5, value = 0.0085933292284608, scaling = 0 },
+      }, value_map))
+
+    assert(table_eq_deep(
+      slice_points(true, env, 1, 3, 6), {
+        { time = 1, value = 0, scaling = 0.75 },
+        { time = 4, value = 0.0075169466435909, scaling = 0 },
+      }, value_map))
+
+    assert(table_eq_deep(
+      slice_points(true, env, 1, 8, 11), {
+        { time = 1, value = 0.99570333957672, scaling = 0.1875 },
+        { time = 4, value = 0.5, scaling = 0 },
+      }, value_map))
+    
+    assert(table_eq_deep(
+      slice_points(true, env, 1, 12, 13), {
+        { time = 1, value = 0.5, scaling = 0 },
+      }, value_map))
   end
 
   print("All automation tests passed.")
