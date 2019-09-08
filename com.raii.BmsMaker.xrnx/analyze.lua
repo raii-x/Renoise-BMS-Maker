@@ -374,7 +374,8 @@ class "TrackAnalyzer"
     
     for env_idx, env in ipairs(note.automation) do
       for pt_idx, pt in ipairs(env) do
-        str = str .. ("%.3f,%.5f,"):format(pt.time, quantize(pt.value, 1 / 0x10000))
+        str = str .. ("%.3f,%.5f,%.5f"):format(pt.time,
+          quantize(pt.value, 1 / 0x10000), quantize(pt.scaling, 1 / 0x10000))
       end
       str = str .. "\n"
     end
