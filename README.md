@@ -38,10 +38,10 @@ BMS creation support tool for Renoise
 
 ## 使い方
 1. Tools メニューから Make BMS... を選択する。  
-![Tools](https://raw.githubusercontent.com/raii-x/Renoise-BMS-Maker/images/tools.png)
+![Tools](images/tools.png)
 
 2. BMS Maker ウィンドウで各種設定をする。  
-![BMS Maker window](https://raw.githubusercontent.com/raii-x/Renoise-BMS-Maker/images/bms_maker2.png)
+![BMS Maker window](images/bms_maker2.png)
 
     * Track Options: 音切りするトラックごとの設定
         * 上部のボタン
@@ -96,11 +96,11 @@ BMS creation support tool for Renoise
     * Render Options: レンダリング時の設定。Renoise の Render to Disk の設定と同じ。
 
 3. BMS Maker ウィンドウの Make ボタンを押し、音切りされた wav ファイルを出力し、BMS 出力に移る。または、Export only ボタンを押し、wav ファイルの出力を行わず、BMS の出力に移る。  
-![Length exceed error](https://raw.githubusercontent.com/raii-x/Renoise-BMS-Maker/images/length_exceed_error.png)  
+![Length exceed error](images/length_exceed_error.png)  
 ここで、このエラーが表示される場合は、レンダリングするノートが長すぎるため wav ファイルを出力することができない。それらノートの開始位置のトラック、シーケンス番号、ライン番号が表示されている。ノートオフを入れるか、1-Shot にチェックを入れることで修正できる。
 
 4. BMS Export ウィンドウで、BMS ファイルを出力する。  
-![BMS Export window](https://raw.githubusercontent.com/raii-x/Renoise-BMS-Maker/images/bms_export.png)
+![BMS Export window](images/bms_export.png)
 
     * File Name:  
     出力する BMS ファイルの名前を指定。
@@ -114,7 +114,7 @@ BMS creation support tool for Renoise
 ## 音切りの動作について
 Track Options で指定された設定に基づいて各トラックを解析し、レンダリングするノートのデータを調べる。レンダリングの際は、ソングの最も上に新しいパターンを作り、ノートのデータを置いてレンダリングすることをノートの数だけ繰り返す。
 
-![Note cutting example](https://raw.githubusercontent.com/raii-x/Renoise-BMS-Maker/images/note_cutting_example.png)
+![Note cutting example](images/note_cutting_example.png)
 
 例として、図の (1) のようなシーケンスに対して処理すること考える。
 
