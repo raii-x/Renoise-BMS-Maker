@@ -3,7 +3,7 @@
   <Name>BMS Maker</Name>
   <Id>com.raii.BmsMaker</Id>
   <Version>0.2</Version>
-  <ApiVersion>5</ApiVersion>
+  <ApiVersion>6</ApiVersion>
   <Author>raii | raii.program@gmail.com</Author>
   <AutoUpgraded>false</AutoUpgraded>
   <Category>BMS</Category>
