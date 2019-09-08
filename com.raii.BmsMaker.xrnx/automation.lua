@@ -113,8 +113,8 @@ end
 
 -- If there's no automation, return nil.
 -- If error, return false.
-local function flatten_points(pat_seq, trk_idx, prm, linear)
-  if not linear then
+local function flatten_points(pat_seq, trk_idx, prm, lines_mode)
+  if not lines_mode then
     return flatten_points_quantum(pat_seq, trk_idx, prm)
   end
 
@@ -134,7 +134,7 @@ local function flatten_points(pat_seq, trk_idx, prm, linear)
     if auto then
       local pts = auto.points
       
-      if auto.playmode == renoise.PatternTrackAutomation.PLAYMODE_LINEAR then
+      if auto.playmode == renoise.PatternTrackAutomation.PLAYMODE_LINES then
       
         -- If there's no point at the head, add point there
         if not auto:has_point_at(1) then
@@ -248,16 +248,16 @@ function flatten_all_params()
       for prm_idx, prm in ipairs(dev.parameters) do
         if prm.is_automated then
 
-          local linear = true
+          local lines_mode = true
           local tag = nil
 
           if prm.value_quantum ~= 0 then
-            linear = false
+            lines_mode = false
           end
           
           if trk.type == renoise.Track.TRACK_TYPE_MASTER and dev_idx == 1 then
             if prm_idx == 6 then
-              linear = false
+              lines_mode = false
               tag = "BPM"
             elseif prm_idx == 7 then
               tag = "LPB"
@@ -266,7 +266,7 @@ function flatten_all_params()
             end
           end
 
-          local env = flatten_points(pat_seq, trk_idx, prm, linear)
+          local env = flatten_points(pat_seq, trk_idx, prm, lines_mode)
   
           if env == false then
             -- Error
@@ -276,7 +276,7 @@ function flatten_all_params()
             local p = {
               trk_idx = trk_idx,
               param = prm,
-              linear = linear,
+              lines_mode = lines_mode,
               tag = tag,
               envelope = env,
             }
@@ -421,8 +421,8 @@ end
 
 
 -- s_time and e_time are inclusive
-function slice_points(linear, points, start_pt_idx, s_time, e_time)
-  if not linear then
+function slice_points(lines_mode, points, start_pt_idx, s_time, e_time)
+  if not lines_mode then
     return slice_points_quantum(points, start_pt_idx, s_time, e_time)
   end
 
@@ -476,11 +476,11 @@ function slice_points(linear, points, start_pt_idx, s_time, e_time)
 end
 
 
-function get_value_in_points(linear, points, start_pt_idx, time)
+function get_value_in_points(lines_mode, points, start_pt_idx, time)
   start_pt_idx = get_first_slice_point(points, start_pt_idx, time)
   local v
 
-  if not linear or start_pt_idx == #points then
+  if not lines_mode or start_pt_idx == #points then
     v = points[start_pt_idx].value
   else
     v = interpolate_points(

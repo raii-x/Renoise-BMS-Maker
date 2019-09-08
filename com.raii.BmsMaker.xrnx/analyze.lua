@@ -270,7 +270,7 @@ class "TrackAnalyzer"
         
         local slice
         slice, start_pt_idx[prm_idx] = slice_points(
-          prm.linear, prm.envelope, start_pt_idx[prm_idx], note_time, note_time + nlines - q)
+          prm.lines_mode, prm.envelope, start_pt_idx[prm_idx], note_time, note_time + nlines - q)
         note.automation:insert(slice)
       end
       
@@ -439,7 +439,7 @@ class "PositionBeat"
     if self._prm_lpb ~= nil then
       local lpb
       lpb, self._lpb_pt_idx = get_value_in_points(
-        self._prm_lpb.linear, self._prm_lpb.envelope, self._lpb_pt_idx, self._time)
+        self._prm_lpb.lines_mode, self._prm_lpb.envelope, self._lpb_pt_idx, self._time)
       lpb = quantize(self._prm_lpb.param.value_min +
         lpb * (self._prm_lpb.param.value_max - self._prm_lpb.param.value_min))
       

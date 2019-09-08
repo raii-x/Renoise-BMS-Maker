@@ -54,7 +54,7 @@ function start_rendering(note_opts, file_opts, render_opts,
     for prm_idx, prm in ipairs(bms_data.automated_params) do
       local auto_pattrk = working_pattern:track(prm.trk_idx)
       local auto = auto_pattrk:create_automation(prm.param)
-      if not prm.linear then
+      if not prm.lines_mode then
         auto.playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
       end
       auto.points = note.automation[prm_idx]
