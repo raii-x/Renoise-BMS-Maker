@@ -1,30 +1,3 @@
-local function update_pos_beat(nume, deno, prm_lpb, lpb_pt_idx, time, max_line)
-  if prm_lpb ~= nil then
-    local lpb
-    lpb, lpb_pt_idx = get_value_in_points(
-      prm_lpb.linear, prm_lpb.envelope, lpb_pt_idx, time)
-    lpb = quantize(prm_lpb.param.value_min +
-      lpb * (prm_lpb.param.value_max - prm_lpb.param.value_min))
-    
-    local d = lcm(lpb, deno)
-    if d > 0x10000000000000 / max_line then
-      renoise.app():show_error("Least common multiple of LPBs is too big.")
-      return nil
-    end
-
-    nume = nume * (d / deno)
-    deno = d
-
-    nume = nume + deno / lpb
-        
-  else
-    nume = nume + 1
-  end
-
-  return nume, deno, lpb_pt_idx
-end
-
-
 class "Analyzer"
   function Analyzer:__init(en_track_opts, s_pos, e_pos)
     self.en_track_opts = en_track_opts
@@ -172,9 +145,8 @@ class "Analyzer"
       return nil
     end
 
-    local pos_beat_nume = 0
-    local pos_beat_deno = renoise.song().transport.lpb
-    local lpb_pt_idx = 1
+    local pos_beat = PositionBeat(
+      prm_lpb, renoise.song().transport.lpb, self.start_time, #self.pos_list)
 
     local t = table.create()
     local bpm_pt_idx = 1
@@ -188,7 +160,7 @@ class "Analyzer"
           break
         elseif pt.time == time then
           t:insert {
-            pos = quantize(pos_beat_nume / pos_beat_deno * BMS_RESOLUTION / 4),
+            pos = quantize(pos_beat:get() * BMS_RESOLUTION / 4),
             value = quantize(prm_bpm.param.value_min +
               pt.value * (prm_bpm.param.value_max - prm_bpm.param.value_min),
               1 / 10000)
@@ -198,10 +170,7 @@ class "Analyzer"
         bpm_pt_idx = i
       end
       
-      pos_beat_nume, pos_beat_deno, lpb_pt_idx = update_pos_beat(
-        pos_beat_nume, pos_beat_deno, prm_lpb, lpb_pt_idx, time, #self.pos_list)
-
-      if pos_beat_nume == nil then
+      if not pos_beat:next() then
         return false
       end
     end
@@ -273,10 +242,8 @@ class "TrackAnalyzer"
       start_pt_idx[i] = 1
     end
 
-    local prm_lpb = self.param_tags.LPB
-    local pos_beat_nume = 0
-    local pos_beat_deno = renoise.song().transport.lpb
-    local lpb_pt_idx = 1
+    local pos_beat = PositionBeat(
+      self.param_tags.LPB, renoise.song().transport.lpb, self.start_time, #self.lines)
     
     local function note_end()
       local nlines = self.track_opt.release_lines
@@ -336,7 +303,7 @@ class "TrackAnalyzer"
         note_line_idx = line_idx
         note_time = time
         self.order:insert {
-          pos = quantize(pos_beat_nume / pos_beat_deno * BMS_RESOLUTION / 4),
+          pos = quantize(pos_beat:get() * BMS_RESOLUTION / 4),
           column = start_ncol_idx,
           note = nil,
         }
@@ -364,10 +331,7 @@ class "TrackAnalyzer"
         end
       end
       
-      pos_beat_nume, pos_beat_deno, lpb_pt_idx = update_pos_beat(
-        pos_beat_nume, pos_beat_deno, prm_lpb, lpb_pt_idx, time, #self.lines)
-
-      if pos_beat_nume == nil then
+      if not pos_beat:next() then
         return false
       end
 
@@ -452,4 +416,49 @@ class "TrackAnalyzer"
       end
     end
     return false
+  end
+
+
+-- Line position represented as number of beats
+class "PositionBeat"
+  function PositionBeat:__init(prm_lpb, lpb, time, max_line)
+    self._nume = 0
+    self._deno = lpb
+    self._prm_lpb = prm_lpb
+    self._lpb_pt_idx = 1
+    self._time = time
+    self._max_line = max_line
+  end
+
+  function PositionBeat:get()
+    return self._nume / self._deno
+  end
+
+  -- Advance 1 line
+  function PositionBeat:next()
+    if self._prm_lpb ~= nil then
+      local lpb
+      lpb, self._lpb_pt_idx = get_value_in_points(
+        self._prm_lpb.linear, self._prm_lpb.envelope, self._lpb_pt_idx, self._time)
+      lpb = quantize(self._prm_lpb.param.value_min +
+        lpb * (self._prm_lpb.param.value_max - self._prm_lpb.param.value_min))
+      
+      local d = lcm(lpb, self._deno)
+      if d > 0x10000000000000 / self._max_line then
+        renoise.app():show_error("Least common multiple of LPBs is too big.")
+        return false
+      end
+  
+      self._nume = self._nume * (d / self._deno)
+      self._deno = d
+
+      self._nume = self._nume + self._deno / lpb
+
+    else
+      self._nume = self._nume + 1
+    end
+
+    self._time = self._time + 1
+
+    return true
   end
