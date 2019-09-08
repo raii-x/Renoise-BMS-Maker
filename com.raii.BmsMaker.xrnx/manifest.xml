@@ -2,7 +2,7 @@
 <RenoiseScriptingTool doc_version="0">
   <Name>BMS Maker</Name>
   <Id>com.raii.BmsMaker</Id>
-  <Version>0.2</Version>
+  <Version>0.21</Version>
   <ApiVersion>6</ApiVersion>
   <Author>raii | raii.program@gmail.com</Author>
   <AutoUpgraded>false</AutoUpgraded>
