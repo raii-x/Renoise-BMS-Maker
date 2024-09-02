@@ -39,6 +39,7 @@ local function add_point_quantum(table, point)
 end
 
 
+-- If error, return false.
 local function flatten_points_quantum(pat_seq, trk_idx, prm)
   local fpts = table.create()
   
@@ -54,15 +55,6 @@ local function flatten_points_quantum(pat_seq, trk_idx, prm)
       value = val,
       scaling = 0
     })
-  end
-
-  -- If parameter is BPM, LPB, or TPL, Renoise changes value
-  -- to first value of pattern automations on heads of each patterns.
-  -- Otherwise Renoise keeps current value on heads of each patterns.
-  -- If error, return false.
-  local head_write = false
-  if prm.name == "BPM" or prm.name == "LPB" or prm.name == "TPL" then
-    head_write = true;
   end
 
   -- Iterate sequences
@@ -83,17 +75,6 @@ local function flatten_points_quantum(pat_seq, trk_idx, prm)
           ("Track %02d: %s, Sequence %d: BPM interpolation mode needs to be \"Points\".")
           :format(trk_idx, renoise.song():track(trk_idx).name, seq_idx - 1))
         return false
-      end
-      
-      if head_write then
-        -- If there's no point at the head, add point there
-        if not auto:has_point_at(1) then
-          add_point_quantum(fpts, {
-            time = seq_time + 1,
-            value = pts[1].value,
-            scaling = 0
-          })
-        end        
       end
 
       -- Flatten points
@@ -766,7 +747,7 @@ if TEST then
         { time = 1, value = 0, scaling = 0 },
         { time = 7, value = 1, scaling = 0 },
         { time = 11, value = 0.5, scaling = 0 },
-        { time = 129, value = 1, scaling = 0 }, -- Not at the point but at the head of the pattern
+        { time = 137, value = 1, scaling = 0 },
       }))
     end
   end
