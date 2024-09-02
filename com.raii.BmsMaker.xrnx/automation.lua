@@ -79,6 +79,11 @@ local function flatten_points_quantum(pat_seq, trk_idx, prm)
 
       -- Flatten points
       for pt_idx, pt in ipairs(auto.points) do
+        -- Ignore points after end of pattern
+        if pt.time >= (nlines + 1) then
+          break
+        end
+
         pt.time = pt.time + seq_time
         add_point_quantum(fpts, pt)
       end
@@ -858,7 +863,8 @@ if TEST then
 
     local pat_seq = renoise.song().sequencer.pattern_sequence
 
-    trk_idx = 2
+    -- Don't use BPM because times of added points will be clamped
+    trk_idx = 1
 
     local pattrk = {}
     for i = 1, 5 do
@@ -920,19 +926,31 @@ if TEST then
       auto[4]:add_point_at(70, 0.5)
       auto[5]:add_point_at(1, 1)
 
-      local env = flatten_points(pat_seq, trk_idx, prm, true)
+      -- Flatten test (Output interpolation mode is Lines)
+      do
+        local env = flatten_points(pat_seq, trk_idx, prm, true)
+        local q = prm.time_quantum
+        assert(table_eq_deep(env, {
+          { time = 1, value = 0, scaling = 0 },
+          { time = 192 - q, value = 0, scaling = 0 },
+          { time = 192, value = 1, scaling = 0 },
+          { time = 193 - q, value = 1, scaling = 0 },
+          { time = 193, value = 0, scaling = 0 },
+          { time = 257 - q, value = 0, scaling = 0 },
+          { time = 257, value = 1, scaling = 0 },
+        }))
+      end
 
-      -- Flatten test
-      local q = prm.time_quantum
-      assert(table_eq_deep(env, {
-        { time = 1, value = 0, scaling = 0 },
-        { time = 192 - q, value = 0, scaling = 0 },
-        { time = 192, value = 1, scaling = 0 },
-        { time = 193 - q, value = 1, scaling = 0 },
-        { time = 193, value = 0, scaling = 0 },
-        { time = 257 - q, value = 0, scaling = 0 },
-        { time = 257, value = 1, scaling = 0 },
-      }))
+      -- Flatten test (Output interpolation mode is Points)
+      do
+        local env = flatten_points(pat_seq, trk_idx, prm, false)
+        assert(table_eq_deep(env, {
+          { time = 1, value = 0, scaling = 0 },
+          { time = 192, value = 1, scaling = 0 },
+          { time = 193, value = 0, scaling = 0 },
+          { time = 257, value = 1, scaling = 0 },
+        }))
+      end
     end
   end
 
