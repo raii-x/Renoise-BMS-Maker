@@ -161,6 +161,11 @@ local function flatten_points(pat_seq, trk_idx, prm, lines_mode)
         
         -- Flatten points
         for pt_idx, pt in ipairs(auto.points) do
+          -- Ignore points after end of pattern
+          if pt.time >= (nlines + 1) then
+            break
+          end
+
           pt.time = pt.time + seq_time
           -- Set 0 to scaling of last point
           if pt_idx == #auto.points then
@@ -168,15 +173,6 @@ local function flatten_points(pat_seq, trk_idx, prm, lines_mode)
           end
 
           add_point(fpts, pt)
-        end
-        
-        -- If there's no point at the end, add point there
-        if not auto:has_point_at(end_time) then
-          add_point(fpts, {
-            time = seq_time + end_time,
-            value = pts[#pts].value,
-            scaling = 0
-          })
         end
 
       elseif auto.playmode == renoise.PatternTrackAutomation.PLAYMODE_POINTS then
@@ -193,7 +189,13 @@ local function flatten_points(pat_seq, trk_idx, prm, lines_mode)
       
         -- Flatten points
         for pt_idx, pt in ipairs(auto.points) do
-          -- If it's not at the head and there's no point behind time_quantum, add point there
+          -- Ignore points after end of pattern
+          if pt.time >= (nlines + 1) then
+            break
+          end
+
+          -- To create immediate change with lines, if the point is not at the head of the pattern
+          -- and there's no point at (time - time_quantum), add point there
           if pt.time > 1 and not auto:has_point_at(pt.time - prm.time_quantum) and #fpts > 0 then
             add_point(fpts, {
               time = seq_time + pt.time - prm.time_quantum,
@@ -206,15 +208,6 @@ local function flatten_points(pat_seq, trk_idx, prm, lines_mode)
           pt.scaling = 0
           add_point(fpts, pt)
         end
-        
-        -- If there's no point at the end, add point there
-        if not auto:has_point_at(end_time) then
-          add_point(fpts, {
-            time = seq_time + end_time,
-            value = pts[#pts].value,
-            scaling = 0
-          })
-        end
 
       else
         renoise.app():show_error(
@@ -223,7 +216,17 @@ local function flatten_points(pat_seq, trk_idx, prm, lines_mode)
         return false
 
       end
-      
+
+      -- If there's no point at the end, add point there
+      if not auto:has_point_at(end_time) then
+        -- Use fpts instead of pts to ignore points after end of pattern
+        add_point(fpts, {
+          time = seq_time + end_time,
+          value = fpts[#fpts].value,
+          scaling = 0
+        })
+      end
+
     -- Without automation
     else
       if seq_idx == 1 then
@@ -866,6 +869,90 @@ if TEST then
       { time = 65, value = 0, scaling = 0 },
       { time = 66, value = 1, scaling = 0 },
     }))
+  end
+
+  -- Test points after end of pattern
+  do
+    setup_test(5)
+
+    local pat_seq = renoise.song().sequencer.pattern_sequence
+
+    trk_idx = 2
+
+    local pattrk = {}
+    for i = 1, 5 do
+      pattrk[i] = renoise.song():pattern(i):track(trk_idx)
+    end
+
+    do
+      local prm = renoise.song():track(trk_idx):device(1):parameter(1)
+
+      local auto = {}
+      auto[1] = pattrk[1]:create_automation(prm)
+      auto[3] = pattrk[3]:create_automation(prm)
+      auto[4] = pattrk[4]:create_automation(prm)
+      auto[5] = pattrk[5]:create_automation(prm)
+
+      auto[1]:add_point_at(65, 0)
+      auto[1]:add_point_at(66, 0.5)
+      auto[3]:add_point_at(64, 1)
+      auto[4]:add_point_at(1, 0)
+      auto[4]:add_point_at(70, 0.5)
+      auto[5]:add_point_at(1, 1)
+
+      local env = flatten_points(pat_seq, trk_idx, prm, true)
+
+      -- Flatten test
+      local q = prm.time_quantum
+      assert(table_eq_deep(env, {
+        { time = 1, value = 0, scaling = 0 },
+        { time = 129 - q, value = 0, scaling = 0 },
+        { time = 129, value = 1, scaling = 0 },
+        { time = 193 - q, value = 1, scaling = 0 },
+        { time = 193, value = 0, scaling = 0 },
+        { time = 257 - q, value = 0, scaling = 0 },
+        { time = 257, value = 1, scaling = 0 },
+      }))
+    end
+
+    do
+      local prm = renoise.song():track(trk_idx):device(1):parameter(2)
+
+      local auto = {}
+      auto[1] = pattrk[1]:create_automation(prm)
+      auto[2] = pattrk[2]:create_automation(prm)
+      auto[3] = pattrk[3]:create_automation(prm)
+      auto[4] = pattrk[4]:create_automation(prm)
+      auto[5] = pattrk[5]:create_automation(prm)
+
+      auto[1].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
+      auto[2].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
+      auto[3].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
+      auto[4].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
+      auto[5].playmode = renoise.PatternTrackAutomation.PLAYMODE_POINTS
+
+      auto[1]:add_point_at(65, 0)
+      auto[1]:add_point_at(66, 0.5)
+      auto[2]:add_point_at(70, 0.75)
+      auto[3]:add_point_at(64, 1)
+      auto[4]:add_point_at(1, 0)
+      auto[4]:add_point_at(70, 0.5)
+      auto[5]:add_point_at(1, 1)
+
+      local env = flatten_points(pat_seq, trk_idx, prm, true)
+
+      -- Flatten test
+      local q = prm.time_quantum
+      assert(table_eq_deep(env, {
+        { time = 1, value = 0, scaling = 0 },
+        { time = 192 - q, value = 0, scaling = 0 },
+        { time = 192, value = 1, scaling = 0 },
+        { time = 193 - q, value = 1, scaling = 0 },
+        { time = 193, value = 0, scaling = 0 },
+        { time = 257 - q, value = 0, scaling = 0 },
+        { time = 257, value = 1, scaling = 0 },
+      }))
+    end
   end
 
   print("All automation tests passed.")
