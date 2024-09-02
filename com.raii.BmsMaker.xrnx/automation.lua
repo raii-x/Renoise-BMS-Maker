@@ -834,5 +834,39 @@ if TEST then
       }, value_map))
   end
 
+  -- Test automation without points
+  do
+    setup_test(2)
+
+    local pat_seq = renoise.song().sequencer.pattern_sequence
+
+    local pattrk = {}
+    for i = 1, 2 do
+      pattrk[i] = renoise.song():pattern(i):track(1)
+    end
+
+    local prm = renoise.song():track(1):device(1):parameter(1)
+
+    local auto = {}
+    auto[1] = pattrk[1]:create_automation(prm)
+    auto[2] = pattrk[2]:create_automation(prm)
+
+    -- Not automated when there is no point
+    assert(not prm.is_automated)
+
+    -- Automated when there are points
+    auto[2]:add_point_at(1, 0)
+    auto[2]:add_point_at(2, 1)
+    assert(prm.is_automated)
+
+    local env = flatten_points(pat_seq, 1, prm, true)
+
+    assert(table_eq_deep(env, {
+      { time = 1, value = 0, scaling = 0 },
+      { time = 65, value = 0, scaling = 0 },
+      { time = 66, value = 1, scaling = 0 },
+    }))
+  end
+
   print("All automation tests passed.")
 end
