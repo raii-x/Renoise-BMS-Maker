@@ -1,12 +1,24 @@
 --------------------------------------------------------------------------------
 -- Flatten functions
 
+-- There are cases where automation exists even though there are no points.
+-- (I think this is a bug in Renoise)
+-- To deal with this, check if there is a point.
+local function find_auto_with_points(pattrk, prm)
+  local auto = pattrk:find_automation(prm)
+  if auto and #auto.points ~= 0 then
+    return auto
+  else
+    return nil
+  end
+end
+
 -- If there's no point, return nil.
 local function get_first_value(pat_seq, trk_idx, prm)
   for seq_idx, pat_idx in ipairs(pat_seq) do
     local pattrk = renoise.song():pattern(pat_idx):track(trk_idx)
     
-    local auto = pattrk:find_automation(prm)
+    local auto = find_auto_with_points(pattrk, prm)
     if auto then
       return auto.points[1].value
     end
@@ -61,7 +73,7 @@ local function flatten_points_quantum(pat_seq, trk_idx, prm)
     
     local nlines = pat.number_of_lines
     
-    local auto = pattrk:find_automation(prm)
+    local auto = find_auto_with_points(pattrk, prm)
 
     if auto then
       local pts = auto.points
@@ -131,7 +143,7 @@ local function flatten_points(pat_seq, trk_idx, prm, lines_mode)
     local nlines = pat.number_of_lines
     local end_time = nlines + 1 - prm.time_quantum
     
-    local auto = pattrk:find_automation(prm)
+    local auto = find_auto_with_points(pattrk, prm)
     -- With automation
     if auto then
       local pts = auto.points
