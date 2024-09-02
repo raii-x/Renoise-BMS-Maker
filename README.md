@@ -29,7 +29,8 @@ BMS creation support tool for Renoise
 * Pattern の最大ライン数である 512 ライン以上のノートのレンダリングはできない。
 
 ## 必要なもの
-* [Renoise 3.2](http://www.renoise.com/ "Home | Renoise")
+* [Renoise](http://www.renoise.com/ "Home | Renoise")
+  (3.2 以上が必要、BPM・LPB・TPL のオートメーションを使う場合は 3.4 以上を推奨)
 
 ## インストール方法
 1. [Releases](https://github.com/raii-x/Renoise-BMS-Maker/releases "Releases · raii-x/Renoise-BMS-Maker") のページから、最新のバージョンの xrnx ファイルをダウンロードする。
